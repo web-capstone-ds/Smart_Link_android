@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">스마트 팩토리 비전 검사</string>
+
+    <!-- 바텀 내비게이션 탭 -->
+    <string name="nav_dashboard">대시보드</string>
+    <string name="nav_equipment">장비 상태</string>
+    <string name="nav_feed">피드</string>
+    <string name="nav_settings">설정</string>
+    <string name="nav_report">보고서</string>
+
+    <!-- 로그인 화면 -->
+    <string name="login_title">비전 검사 시스템</string>
+    <string name="login_subtitle">Vision Inspection Dashboard</string>
+    <string name="hint_employee_id">사번 입력 (예: EMP001)</string>
+    <string name="hint_password">비밀번호 입력</string>
+    <string name="label_employee_id">사번</string>
+    <string name="label_password">비밀번호</string>
+    <string name="btn_login">로그인</string>
+    <string name="test_account_hint">테스트 계정: EMP001 / 1234</string>
+    <string name="error_empty_employee_id">사번을 입력하세요</string>
+    <string name="error_empty_password">비밀번호를 입력하세요</string>
+    <string name="error_invalid_credentials">사번 또는 비밀번호가 올바르지 않습니다.</string>
+
+    <!-- 대시보드 -->
+    <string name="dashboard_title">비전 검사 대시보드</string>
+    <string name="line_running">LINE-A • 가동 중</string>
+    <string name="progress_label">작업 진행</string>
+
+    <!-- 검사 결과 -->
+    <string name="result_pass">합격</string>
+    <string name="result_fail">불합격</string>
+    <string name="result_marginal">경계</string>
+
+    <!-- 장비 상태 -->
+    <string name="equipment_title">장비 상태</string>
+    <string name="status_running">가동 중</string>
+    <string name="status_warning">경고</string>
+    <string name="status_error">오류</string>
+    <string name="status_idle">대기</string>
+
+    <!-- 보고서 -->
+    <string name="report_title">보고서</string>
+    <string name="btn_daily">일일 보고서</string>
+    <string name="btn_weekly">주간 보고서</string>
+    <string name="report_yield">수율</string>
+    <string name="report_fail_rate">LOT 불합격률</string>
+    <string name="report_total_units">총 검사 유닛</string>
+    <string name="oracle_analysis_title">서버 자동 분석</string>
+
+    <!-- LOT 상세 바텀시트 -->
+    <string name="sheet_subtitle">LOT 검사 집계</string>
+    <string name="tab_yield">수율 현황</string>
+    <string name="tab_alarms">로트 알람</string>
+    <string name="meta_equipment">장비</string>
+    <string name="meta_operator">작업자</string>
+    <string name="meta_recipe">레시피</string>
+    <string name="meta_time">시각</string>
+    <string name="section_defects">주요 불량 유형</string>
+    <string name="section_alarm_timeline">알람 타임라인</string>
+    <string name="no_alarms">이 LOT에서 발생한 알람이 없습니다.</string>
+
+    <!-- 설정 -->
+    <string name="settings_title">설정</string>
+    <string name="btn_logout">로그아웃</string>
+    <string name="label_name">이름</string>
+    <string name="label_emp_id">사번</string>
+    <string name="label_department">부서</string>
+    <string name="label_role">역할</string>
+</resources>

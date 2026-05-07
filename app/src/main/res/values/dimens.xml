@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 기본 간격 -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_lg">16dp</dimen>
+    <dimen name="spacing_xl">24dp</dimen>
+
+    <!-- 카드 -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">0dp</dimen>
+    <dimen name="card_padding">14dp</dimen>
+
+    <!-- 입력 필드 -->
+    <dimen name="input_height">52dp</dimen>
+    <dimen name="input_corner_radius">10dp</dimen>
+
+    <!-- 버튼 -->
+    <dimen name="btn_height">52dp</dimen>
+    <dimen name="btn_corner_radius">10dp</dimen>
+
+    <!-- 바텀 내비게이션 -->
+    <dimen name="bottom_nav_height">60dp</dimen>
+
+    <!-- 도넛 차트 -->
+    <dimen name="donut_chart_size">140dp</dimen>
+
+    <!-- 배지 -->
+    <dimen name="badge_corner_radius">6dp</dimen>
+
+    <!-- 상태 점 -->
+    <dimen name="status_dot_size">8dp</dimen>
+
+    <!-- 결과 인디케이터 (카드 왼쪽 선) -->
+    <dimen name="result_indicator_width">3dp</dimen>
+</resources>

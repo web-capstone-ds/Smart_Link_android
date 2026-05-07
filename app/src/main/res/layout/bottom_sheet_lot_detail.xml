@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LOT 집계 바텀시트 (DetailBottomSheet.tsx 완전 이식)
+  ┌─────────────────────────────────────────┐
+  │  드래그 핸들                             │
+  │  LOT ID + 결과 배지                      │
+  │  장비 / 작업자 / 레시피 / 시각 (4행 메타) │
+  │  ─────────────────────────────────────  │
+  │  TabLayout: [수율 현황] [로트 알람]       │
+  │  ─ 수율 현황 (content_yield) ──────────  │
+  │    도넛 차트 | 수율%                     │
+  │    4개 통계 셀                           │
+  │    주요 불량 RecyclerView                │
+  │  ─ 로트 알람 (content_alarms) ─────────  │
+  │    CRITICAL/WARNING/INFO 카운트          │
+  │    알람 타임라인 RecyclerView            │
+  └─────────────────────────────────────────┘
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ── 드래그 핸들 ── -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:background="#FF30363D"
+            android:layout_marginBottom="4dp" />
+
+        <!-- ── 헤더 영역 ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp">
+
+            <!-- 서브타이틀 -->
+            <TextView
+                android:id="@+id/tv_sheet_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LOT 검사 집계"
+                android:textColor="@color/text_secondary"
+                android:textSize="10sp"
+                android:letterSpacing="0.10" />
+
+            <!-- LOT ID + 결과 배지 행 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/tv_sheet_lot_id"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace" />
+
+                <TextView
+                    android:id="@+id/tv_result_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_fail"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- ── 메타 4행 (장비 / 작업자 / 레시피 / 시각) ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp">
+
+                <!-- 장비 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingVertical="5dp">
+                    <TextView android:layout_width="64dp" android:layout_height="wrap_content"
+                        android:text="장비" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/tv_meta_equipment"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:background="@drawable/bg_meta_chip"
+                        android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+                        android:textColor="@color/text_primary" android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- 작업자 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingVertical="5dp">
+                    <TextView android:layout_width="64dp" android:layout_height="wrap_content"
+                        android:text="작업자" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/tv_meta_operator"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:background="@drawable/bg_meta_chip"
+                        android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+                        android:textColor="@color/text_primary" android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- 레시피 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingVertical="5dp">
+                    <TextView android:layout_width="64dp" android:layout_height="wrap_content"
+                        android:text="레시피" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/tv_meta_recipe"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:background="@drawable/bg_meta_chip"
+                        android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+                        android:textColor="@color/text_primary" android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+
+                <!-- 시각 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingVertical="5dp">
+                    <TextView android:layout_width="64dp" android:layout_height="wrap_content"
+                        android:text="시각" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    <TextView
+                        android:id="@+id/tv_meta_time"
+                        android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:background="@drawable/bg_meta_chip"
+                        android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+                        android:textColor="@color/text_primary" android:textSize="12sp"
+                        android:fontFamily="monospace" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 구분선 -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/border" />
+
+        <!-- ── 탭 레이아웃 ── -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_layout"
+            style="@style/Widget.SmartFactory.TabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="44dp" />
+
+        <!-- 구분선 -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/border" />
+
+        <!-- ════════════════════════════════════════════════ -->
+        <!-- 수율 현황 탭 콘텐츠                              -->
+        <!-- ════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/content_yield"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:visibility="visible">
+
+            <!-- 도넛 차트 + 수율% (가로 배치) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- 도넛 차트 -->
+                <com.smartfactory.visioninspection.views.DonutChartView
+                    android:id="@+id/donut_chart"
+                    android:layout_width="140dp"
+                    android:layout_height="140dp" />
+
+                <!-- 범례 영역 -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <!-- 수율 % 대형 텍스트 -->
+                    <TextView
+                        android:id="@+id/tv_yield_pct"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="32sp"
+                        android:textStyle="bold" />
+
+                    <!-- 범례 항목 -->
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+                        <View android:layout_width="10dp" android:layout_height="10dp"
+                            android:background="#3FB950" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text=" 합격" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+                        <View android:layout_width="10dp" android:layout_height="10dp"
+                            android:background="#D29922" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text=" 경계" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+                        <View android:layout_width="10dp" android:layout_height="10dp"
+                            android:background="#F85149" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text=" 불합격" android:textColor="@color/text_secondary" android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ── 4개 통계 셀 (2x2 그리드) ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="14dp">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- 총 유닛 -->
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical"
+                        android:background="@drawable/bg_card_dark"
+                        android:padding="12dp" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="총 유닛" android:textColor="@color/text_secondary" android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/tv_stat_total"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textColor="@color/text_primary" android:textSize="18sp"
+                            android:textStyle="bold" android:fontFamily="monospace" />
+                    </LinearLayout>
+
+                    <!-- 불합격 유닛 -->
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical"
+                        android:background="@drawable/bg_card_dark"
+                        android:padding="12dp" android:layout_marginStart="6dp" android:layout_marginBottom="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="불합격 유닛" android:textColor="@color/text_secondary" android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/tv_stat_fail"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textColor="@color/color_fail" android:textSize="18sp"
+                            android:textStyle="bold" android:fontFamily="monospace" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- 수율 -->
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical"
+                        android:background="@drawable/bg_card_dark"
+                        android:padding="12dp" android:layout_marginEnd="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="수율" android:textColor="@color/text_secondary" android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/tv_stat_yield"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textColor="@color/color_pass" android:textSize="18sp"
+                            android:textStyle="bold" android:fontFamily="monospace" />
+                    </LinearLayout>
+
+                    <!-- 불량률 -->
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical"
+                        android:background="@drawable/bg_card_dark"
+                        android:padding="12dp" android:layout_marginStart="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="불량률" android:textColor="@color/text_secondary" android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/tv_stat_fail_rate"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textColor="@color/color_marginal" android:textSize="18sp"
+                            android:textStyle="bold" android:fontFamily="monospace" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ── 주요 불량 유형 타이틀 ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="주요 불량 유형"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:letterSpacing="0.06"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="6dp" />
+
+            <!-- 주요 불량 RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_defects"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+        </LinearLayout>
+
+        <!-- ════════════════════════════════════════════════ -->
+        <!-- 로트 알람 탭 콘텐츠                              -->
+        <!-- ════════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/content_alarms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone">
+
+            <!-- 심각도 요약 행 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/bg_card_dark"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp">
+
+                <!-- CRITICAL -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView
+                        android:id="@+id/tv_alarm_critical_count"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/color_fail"
+                        android:textSize="22sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="CRITICAL" android:textColor="@color/color_fail" android:textSize="9sp"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+
+                <!-- WARNING -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView
+                        android:id="@+id/tv_alarm_warning_count"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/color_marginal"
+                        android:textSize="22sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="WARNING" android:textColor="@color/color_marginal" android:textSize="9sp"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+
+                <!-- INFO -->
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView
+                        android:id="@+id/tv_alarm_info_count"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/color_info"
+                        android:textSize="22sp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="INFO" android:textColor="@color/color_info" android:textSize="9sp"
+                        android:letterSpacing="0.06" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 알람 없음 메시지 -->
+            <TextView
+                android:id="@+id/tv_no_alarms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="이 LOT에서 발생한 알람이 없습니다."
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:paddingVertical="24dp"
+                android:visibility="gone" />
+
+            <!-- 알람 타임라인 RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_alarms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+        </LinearLayout>
+
+        <!-- 하단 여백 -->
+        <View android:layout_width="0dp" android:layout_height="24dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ── 앱 기본 테마 (다크) ── -->
+    <style name="Theme.SmartFactory" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/color_info</item>
+        <item name="colorPrimaryDark">@color/bg_phone</item>
+        <item name="colorAccent">@color/color_info</item>
+        <item name="android:windowBackground">@color/bg_phone</item>
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:navigationBarColor">@color/nav_bar</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <!-- EditText 커서 / 밑줄 색상 -->
+        <item name="colorControlActivated">@color/color_info</item>
+        <item name="colorControlHighlight">@color/color_info_bg</item>
+    </style>
+
+    <!-- ── 바텀시트 다이얼로그 테마 ── -->
+    <style name="Theme.SmartFactory.BottomSheet" parent="Theme.MaterialComponents.BottomSheetDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="bottomSheetStyle">@style/Widget.SmartFactory.BottomSheet</item>
+        <item name="android:statusBarColor">@color/status_bar</item>
+    </style>
+
+    <style name="Widget.SmartFactory.BottomSheet" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/bg_bottom_sheet</item>
+    </style>
+
+    <!-- ── TabLayout 스타일 ── -->
+    <style name="Widget.SmartFactory.TabLayout" parent="Widget.MaterialComponents.TabLayout">
+        <item name="android:background">@color/bg_card</item>
+        <item name="tabIndicatorColor">@color/color_info</item>
+        <item name="tabSelectedTextColor">@color/color_info</item>
+        <item name="tabTextColor">@color/text_secondary</item>
+        <item name="tabIndicatorHeight">2dp</item>
+        <item name="tabTextAppearance">@style/TextAppearance.SmartFactory.Tab</item>
+    </style>
+
+    <style name="TextAppearance.SmartFactory.Tab" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">11sp</item>
+        <item name="textAllCaps">false</item>
+    </style>
+
+    <!-- ── 바텀 내비게이션 활성 인디케이터 ── -->
+    <style name="Widget.SmartFactory.BottomNavIndicator" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemActiveIndicatorStyle">@style/BottomNavActiveIndicator</item>
+    </style>
+
+    <style name="BottomNavActiveIndicator">
+        <item name="android:color">@color/color_info_bg</item>
+    </style>
+
+    <!-- ── 텍스트 스타일 ── -->
+    <style name="TextAppearance.SmartFactory.Label" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <style name="TextAppearance.SmartFactory.Mono" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+</resources>

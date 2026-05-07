@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LoginActivity 레이아웃 (LoginScreen.tsx 대응) -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/bg_phone"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="28dp"
+        android:paddingTop="72dp"
+        android:paddingBottom="40dp">
+
+        <!-- ── 로고 영역 ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SMART FACTORY"
+            android:textColor="@color/color_info"
+            android:textSize="11sp"
+            android:letterSpacing="0.18"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="비전 검사 시스템"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vision Inspection Dashboard"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- ── 구분선 ── -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:layout_marginTop="24dp"
+            android:background="@color/color_info" />
+
+        <View android:layout_width="0dp" android:layout_height="40dp" />
+
+        <!-- ── 사번 레이블 ── -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="사번"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:letterSpacing="0.06"
+            android:layout_marginBottom="6dp" />
+
+        <!-- ── 사번 입력 ── -->
+        <EditText
+            android:id="@+id/et_employee_id"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:hint="사번 입력 (예: EMP001)"
+            android:inputType="text"
+            android:paddingHorizontal="16dp"
+            android:fontFamily="monospace"
+            android:textSize="14sp"
+            android:imeOptions="actionNext" />
+
+        <View android:layout_width="0dp" android:layout_height="14dp" />
+
+        <!-- ── 비밀번호 레이블 ── -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="비밀번호"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:letterSpacing="0.06"
+            android:layout_marginBottom="6dp" />
+
+        <!-- ── 비밀번호 입력 (토글 포함) ── -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp">
+
+            <EditText
+                android:id="@+id/et_password"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_input"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_hint"
+                android:hint="비밀번호 입력"
+                android:inputType="textPassword"
+                android:paddingStart="16dp"
+                android:paddingEnd="52dp"
+                android:textSize="14sp"
+                android:imeOptions="actionDone" />
+
+            <ImageButton
+                android:id="@+id/btn_toggle_password"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_visibility"
+                app:tint="@color/text_secondary"
+                android:contentDescription="비밀번호 보이기/숨기기" />
+        </FrameLayout>
+
+        <View android:layout_width="0dp" android:layout_height="28dp" />
+
+        <!-- ── 로그인 버튼 ── -->
+        <Button
+            android:id="@+id/btn_login"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="로그인"
+            android:textColor="#0D1117"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_button_primary"
+            android:elevation="0dp"
+            android:stateListAnimator="@null" />
+
+        <View android:layout_width="0dp" android:layout_height="20dp" />
+
+        <!-- ── 테스트 계정 안내 ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="테스트 계정: EMP001 / 1234"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="monospace" />
+
+    </LinearLayout>
+</ScrollView>
