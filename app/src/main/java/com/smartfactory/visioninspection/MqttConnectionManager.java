@@ -36,7 +36,7 @@ public class MqttConnectionManager {
             // 명세서 §4: ACL 인증 의무화
             options.setUserName(USERNAME);
             options.setPassword(PASSWORD.getBytes());
-            options.setCleanStart(true);
+            options.setCleanStart(false);
 
             mqttClient.setCallback(new MqttCallback() {
                 @Override

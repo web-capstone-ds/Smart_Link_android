@@ -15,6 +15,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
         <!-- 1. 앱을 켜면 가장 먼저 실행되는 로그인 화면 (LAUNCHER) -->
