@@ -12,11 +12,11 @@ public class MqttConnectionManager {
 
     // 명세서 §3: 포트 1883, 망 분리 로컬 환경
     private static final String BROKER_URL = "tcp://10.0.2.2:1883";
-    private static final String CLIENT_ID = "MOBILE_APP_USER_01"; // 고유 ID 권장
+    private static final String CLIENT_ID = "mobile_user_v3"; // 고유 ID 권장
 
     // 명세서 §4: 모바일 앱 전용 계정
     private static final String USERNAME = "mobile_app";
-    private static final String PASSWORD = "your_secure_password"; // .env에 정의된 비번
+    private static final String PASSWORD = "mobile_user_v3"; // .env에 정의된 비번
 
     // 명세서 §5: 전체 구독 권한 (ds/#)
     private static final String SUB_TOPIC_ALL = "ds/#";
