@@ -197,4 +197,17 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             }
         });
     }
+    //MqttEventListener에 새로 추가한 메서드 구현
+    @Override
+    public void onInspectionResultReceived(String topic, String message) {
+        // 백그라운드 스레드에서 화면(UI)을 안전하게 바꾸기 위한 마법의 주문
+        runOnUiThread(() -> {
+            // 일단 로그캣(Logcat)에 예쁘게 찍히는지 확인용 로그입니다.
+            android.util.Log.d("MQTT_TEST", "수신된 주파수: " + topic);
+            android.util.Log.d("MQTT_TEST", "수신된 검사결과: " + message);
+
+            // TODO: 나중에 여기에 화면의 텍스트(TextView)나 색상을 바꾸는 코드를 넣습니다.
+        });
+    }
+
 }

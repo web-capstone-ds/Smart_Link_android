@@ -16,7 +16,7 @@ public class MqttConnectionManager {
 
     // 명세서 §4: 모바일 앱 전용 계정
     private static final String USERNAME = "mobile_app";
-    private static final String PASSWORD = "mobile_user_v3"; // .env에 정의된 비번
+    private static final String PASSWORD = "testpass123"; // .env에 정의된 비번
 
     // 명세서 §5: 전체 구독 권한 (ds/#)
     private static final String SUB_TOPIC_ALL = "ds/#";
@@ -45,28 +45,32 @@ public class MqttConnectionManager {
                     Log.d(TAG, "수신 토픽: " + topic + " | 내용: " + payload);
 
                     String[] parts = topic.split("/");
+                    // 주파수가 ds/VIS-001/result 처럼 3조각 이상이고, MainActivity와 연결되어 있다면
                     if (parts.length >= 3 && listener != null) {
-                        String eqId = parts[1];
-                        String eventType = parts[2];
+                        String eqId = parts[1];      // 예: VIS-001
+                        String eventType = parts[2]; // 예: result 또는 status
 
                         try {
-                            // 💡 마법의 Gson 출동! JSON 글자를 StatusUpdateEvent 상자로 한 번에 변환!
-                            Gson gson = new Gson();
-                            StatusUpdateEvent event = gson.fromJson(payload, StatusUpdateEvent.class);
+                            // ✉️ 1. 검사 결과(result) 데이터가 들어왔을 때
+                            if ("result".equals(eventType)) {
+                                // 방금 MainActivity에 만든 새 연락망으로 직행!
+                                listener.onInspectionResultReceived(topic, payload);
+                            }
+                            // ⚙️ 2. 장비 상태(status) 데이터가 들어왔을 때
+                            else if ("status".equals(eventType)) {
+                                Gson gson = new Gson();
+                                StatusUpdateEvent event = gson.fromJson(payload, StatusUpdateEvent.class);
 
-                            // 혹시 변환에 실패해 null이면 빈 상자로 만듦
-                            if (event == null) event = new StatusUpdateEvent();
+                                if (event == null) event = new StatusUpdateEvent();
+                                event.setEquipmentId(eqId);
+                                event.setEventType(eventType);
+                                event.setRawPayload(payload);
 
-                            // 토픽에서 뽑아낸 정보도 상자에 마저 담아줍니다.
-                            event.setEquipmentId(eqId);
-                            event.setEventType(eventType);
-                            event.setRawPayload(payload);
-
-                            // 메인 화면으로 완성된 상자 던지기!
-                            listener.onStatusUpdateReceived(event);
-
+                                // 기존 상태 업데이트 연락망으로 직행!
+                                listener.onStatusUpdateReceived(event);
+                            }
                         } catch (Exception e) {
-                            Log.e(TAG, "JSON 파싱 실패! 데이터가 깨졌습니다.", e);
+                            Log.e(TAG, "데이터 분류/파싱 실패!", e);
                         }
                     }
                 }

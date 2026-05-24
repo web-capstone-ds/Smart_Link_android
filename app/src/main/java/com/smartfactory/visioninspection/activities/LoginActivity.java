@@ -37,10 +37,12 @@ public class LoginActivity extends AppCompatActivity {
         sessionManager = new SessionManager(this);
 
         // 이미 로그인된 세션이면 메인으로 즉시 이동
+        /*
         if (sessionManager.isLoggedIn()) {
             goToMain();
-            return;
+           return;
         }
+         */
 
         setContentView(R.layout.activity_login);
 
@@ -89,6 +91,7 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         User user = MockUsersUtil.validateLogin(empId, pass);
+
         if (user != null) {
             sessionManager.saveSession(user);
             goToMain();
