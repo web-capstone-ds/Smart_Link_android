@@ -21,6 +21,7 @@
     <string name="error_empty_employee_id">사번을 입력하세요</string>
     <string name="error_empty_password">비밀번호를 입력하세요</string>
     <string name="error_invalid_credentials">사번 또는 비밀번호가 올바르지 않습니다.</string>
+    <string name="cd_toggle_password">비밀번호 표시 전환</string>
 
     <!-- 대시보드 -->
     <string name="dashboard_title">비전 검사 대시보드</string>

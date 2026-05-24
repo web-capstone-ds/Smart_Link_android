@@ -2,11 +2,13 @@ package com.smartfactory.visioninspection.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.InputType;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,93 +18,95 @@ import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.MockUsersUtil;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
-/**
- * 로그인 화면 (LoginScreen.tsx 대응)
- * 사번 + 비밀번호 입력 → MockUsersUtil 검증 → MainActivity 이동
- */
+import java.util.Locale;
+
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText    etEmployeeId;
-    private EditText    etPassword;
-    private ImageButton btnTogglePassword;
-    private Button      btnLogin;
+    private EditText etEmployeeId;
+    private EditText etPassword;
+    private ImageButton btnTogglePw;
+    private TextView tvError;
+    private Button btnLogin;
+    private TextView btnChangePassword;
 
-    private boolean         passwordVisible = false;
-    private SessionManager  sessionManager;
+    private boolean isPasswordVisible = false;
+    private SessionManager sessionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_login);
 
         sessionManager = new SessionManager(this);
 
-        // 이미 로그인된 세션이면 메인으로 즉시 이동
-        /*
+        // 이미 로그인되어 있으면 메인으로 이동
         if (sessionManager.isLoggedIn()) {
             goToMain();
-           return;
+            return;
         }
-         */
 
-        setContentView(R.layout.activity_login);
+        etEmployeeId = findViewById(R.id.etEmployeeId);
+        etPassword = findViewById(R.id.etPassword);
+        btnTogglePw = findViewById(R.id.btnTogglePw);
+        tvError = findViewById(R.id.tvError);
+        btnLogin = findViewById(R.id.btnLogin);
+        btnChangePassword = findViewById(R.id.btnChangePassword);
 
-        etEmployeeId      = findViewById(R.id.et_employee_id);
-        etPassword        = findViewById(R.id.et_password);
-        btnTogglePassword = findViewById(R.id.btn_toggle_password);
-        btnLogin          = findViewById(R.id.btn_login);
-
-        // 비밀번호 토글
-        btnTogglePassword.setOnClickListener(v -> togglePasswordVisibility());
-
-        // 로그인 버튼
+        btnTogglePw.setOnClickListener(v -> togglePasswordVisibility());
         btnLogin.setOnClickListener(v -> handleLogin());
+
+        // 현재는 임시 처리 (나중에 비밀번호 변경 화면 연결)
+        btnChangePassword.setOnClickListener(v ->
+                Toast.makeText(this, "비밀번호 변경 기능은 다음 단계에서 연결합니다.", Toast.LENGTH_SHORT).show()
+        );
     }
 
-    // ── 비밀번호 표시/숨김 전환 ───────────────────────────────
     private void togglePasswordVisibility() {
-        passwordVisible = !passwordVisible;
-        if (passwordVisible) {
-            etPassword.setInputType(
-                    InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-            btnTogglePassword.setImageResource(R.drawable.ic_visibility_off);
+        isPasswordVisible = !isPasswordVisible;
+
+        if (isPasswordVisible) {
+            etPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+            btnTogglePw.setImageResource(R.drawable.ic_visibility);
         } else {
-            etPassword.setInputType(
-                    InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-            btnTogglePassword.setImageResource(R.drawable.ic_visibility);
+            etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            btnTogglePw.setImageResource(R.drawable.ic_visibility_off);
         }
+
         // 커서를 텍스트 끝으로 유지
         etPassword.setSelection(etPassword.getText().length());
     }
 
-    // ── 로그인 처리 ──────────────────────────────────────────
     private void handleLogin() {
-        String empId = etEmployeeId.getText().toString().trim();
-        String pass  = etPassword.getText().toString().trim();
+        tvError.setVisibility(View.GONE);
+
+        String empId = etEmployeeId.getText().toString().trim().toUpperCase(Locale.ROOT);
+        String pw = etPassword.getText().toString().trim();
 
         if (empId.isEmpty()) {
-            etEmployeeId.setError(getString(R.string.error_empty_employee_id));
-            etEmployeeId.requestFocus();
-            return;
-        }
-        if (pass.isEmpty()) {
-            etPassword.setError(getString(R.string.error_empty_password));
-            etPassword.requestFocus();
+            showError("사번을 입력해주세요.");
             return;
         }
 
-        User user = MockUsersUtil.validateLogin(empId, pass);
+        if (pw.isEmpty()) {
+            showError("비밀번호를 입력해주세요.");
+            return;
+        }
+
+        User user = MockUsersUtil.validateLogin(empId, pw);
 
         if (user != null) {
             sessionManager.saveSession(user);
             goToMain();
         } else {
-            Toast.makeText(this,
-                    getString(R.string.error_invalid_credentials),
-                    Toast.LENGTH_SHORT).show();
+            showError("사번 또는 비밀번호가 올바르지 않습니다.");
         }
     }
 
-    // ── MainActivity 이동 (백스택 제거) ──────────────────────
+    private void showError(String message) {
+        tvError.setText(message);
+        tvError.setVisibility(View.VISIBLE);
+    }
+
     private void goToMain() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
