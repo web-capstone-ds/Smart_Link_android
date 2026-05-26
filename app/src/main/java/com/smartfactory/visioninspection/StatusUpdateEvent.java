@@ -13,11 +13,17 @@ public class StatusUpdateEvent {
     @SerializedName("equipment_status")
     private String equipmentStatus;
 
+    @SerializedName("timestamp")
+    private String timestamp;
+
     @SerializedName("lot_id")
     private String lotId;
 
     @SerializedName("recipe_id")
     private String recipeId;
+
+    @SerializedName("operator_id")
+    private String operatorId;
 
     @SerializedName("current_unit_count")
     private Integer currentUnitCount;
@@ -27,6 +33,9 @@ public class StatusUpdateEvent {
 
     @SerializedName("current_yield_pct")
     private Double currentYieldPct;
+
+    @SerializedName("uptime_sec")
+    private Long uptimeSec;
 
     // --- 데이터를 담아주기 위한 Setter ---
     public void setEquipmentId(String equipmentId) { this.equipmentId = equipmentId; }
@@ -38,12 +47,14 @@ public class StatusUpdateEvent {
     public String getEventType() { return eventType; }
     public String getRawPayload() { return rawPayload; }
 
-    // MainActivity 호환용 (기존 getStatus()를 장비 상태로 연결)
+    public String getEquipmentStatus() { return equipmentStatus; }
+    public String getTimestamp() { return timestamp; }
+    public String getOperatorId() { return operatorId; }
     public String getStatus() { return equipmentStatus != null ? equipmentStatus : eventType; }
-
     public String getLotId() { return lotId; }
     public String getRecipeId() { return recipeId; }
     public Integer getCurrentUnitCount() { return currentUnitCount; }
     public Integer getExpectedTotalUnits() { return expectedTotalUnits; }
     public Double getCurrentYieldPct() { return currentYieldPct; }
+    public Long getUptimeSec() { return uptimeSec; }
 }

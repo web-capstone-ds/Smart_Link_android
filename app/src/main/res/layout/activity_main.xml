@@ -1,99 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  MainActivity 레이아웃
-  ┌─────────────────────────────────┐
-  │  Global Header                  │  ← view_global_header (앱명 + 사용자 배지)
-  ├─────────────────────────────────┤
-  │                                 │
-  │  Fragment Container             │  ← 각 탭 Fragment 표시 영역
-  │  (Dashboard / Equipment / …)   │
-  │                                 │
-  ├─────────────────────────────────┤
-  │  BottomNavigationView (5탭)     │
-  └─────────────────────────────────┘
--->
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_phone">
 
-    <!-- ── 글로벌 헤더 ────────────────────────────────────── -->
-    <LinearLayout
-        android:id="@+id/view_global_header"
-        android:layout_width="0dp"
-        android:layout_height="56dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="16dp"
-        android:background="@color/bg_header"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- 앱 제목 + 라인 레이블 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tv_header_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="비전 검사 대시보드"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Smart Factory Vision System"
-                android:textColor="@color/text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="monospace" />
-        </LinearLayout>
-
-        <!-- 로그인 사용자 배지 -->
-        <TextView
-            android:id="@+id/tv_user_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:background="@drawable/bg_meta_chip"
-            android:textColor="@color/color_info"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp" />
-
-    </LinearLayout>
-
-    <!-- ── Fragment 컨테이너 ──────────────────────────────── -->
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/view_global_header"
         app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- ── 바텀 내비게이션 (5탭) ─────────────────────────── -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
+        style="@style/Widget.SmartFactory.BottomNavIndicator"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@color/bottom_nav_bg"
-        app:menu="@menu/bottom_nav_menu"
         app:itemIconTint="@color/bottom_nav_item_color"
         app:itemTextColor="@color/bottom_nav_item_color"
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:menu="@menu/bottom_nav_menu" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
