@@ -32,14 +32,23 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class FeedFragment extends Fragment {
 
     private static final int MAX_UI_ITEMS = 120;
+
+    private static final String FILTER_ALL = "ALL";
+    private static final String FILTER_PASS = "PASS";
+    private static final String FILTER_MARGINAL = "MARGINAL";
+    private static final String FILTER_FAIL = "FAIL";
+    private static final String FILTER_ORACLE = "ORACLE";
+    private static final String FILTER_HW = "HW";
 
     private TextView tvUserId;
     private TextView tvUserName;
@@ -61,9 +70,14 @@ public class FeedFragment extends Fragment {
     private FeedAdapter adapter;
     private EventHistoryStore historyStore;
 
-    private String selectedLine = "ALL";
-    private String selectedResult = "ALL";
+    private String selectedLine = FILTER_ALL;
+    private final Set<String> selectedResultFilters = new LinkedHashSet<>();
     private boolean mqttConnected;
+    private String loggedInEmployeeId = "EMP001";
+
+    private final Map<String, String> latestRecipeByEquipment = new HashMap<>();
+    private final Map<String, FeedAdapter.LotResult> latestLotResultByEquipment = new HashMap<>();
+    private final Map<String, FeedAdapter.LotResult> latestLotResultByLotKey = new HashMap<>();
 
     @Nullable
     @Override
@@ -81,10 +95,12 @@ public class FeedFragment extends Fragment {
         setupHeaderActions();
         setupHeaderUser();
         renderConnectionState();
+        resetResultFilter();
 
         historyStore = new EventHistoryStore(requireContext());
         allEvents.clear();
         allEvents.addAll(historyStore.loadFeedEvents());
+        rebuildRealtimeContextFromEvents();
 
         RecyclerView rv = view.findViewById(R.id.rv_feed);
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -94,8 +110,8 @@ public class FeedFragment extends Fragment {
         rv.setAdapter(adapter);
 
         btnClearFilter.setOnClickListener(v -> {
-            selectedLine = "ALL";
-            selectedResult = "ALL";
+            selectedLine = FILTER_ALL;
+            resetResultFilter();
             renderFilters();
             applyFilters();
         });
@@ -150,6 +166,7 @@ public class FeedFragment extends Fragment {
         tvUserId.setText(user.getEmployeeId());
         tvUserName.setText(user.getName());
         tvDeptRole.setText(user.getDepartmentRolePhoneLabel());
+        loggedInEmployeeId = user.getEmployeeId();
     }
 
     public void applyEquipmentFilter(String equipmentId) {
@@ -217,7 +234,7 @@ public class FeedFragment extends Fragment {
         resultFilterContainer.removeAllViews();
 
         Set<String> lineIds = new LinkedHashSet<>();
-        lineIds.add("ALL");
+        lineIds.add(FILTER_ALL);
         allEvents.stream()
                 .map(FeedEvent::getEquipmentId)
                 .filter(id -> id != null && !id.trim().isEmpty())
@@ -226,7 +243,7 @@ public class FeedFragment extends Fragment {
 
         for (String lineId : lineIds) {
             boolean selected = lineId.equals(selectedLine);
-            TextView chip = buildChip(lineId.equals("ALL") ? "전체 장비" : toLineLabel(lineId), selected);
+            TextView chip = buildChip(lineId.equals(FILTER_ALL) ? "전체 장비" : toLineLabel(lineId), selected);
             chip.setOnClickListener(v -> {
                 selectedLine = lineId;
                 renderFilters();
@@ -235,16 +252,39 @@ public class FeedFragment extends Fragment {
             lineFilterContainer.addView(chip);
         }
 
-        String[] resultOptions = new String[]{"ALL", "PASS", "MARGINAL", "FAIL"};
+        String[] resultOptions = new String[]{FILTER_ALL, FILTER_PASS, FILTER_MARGINAL, FILTER_FAIL, FILTER_ORACLE, FILTER_HW};
         for (String option : resultOptions) {
-            boolean selected = option.equals(selectedResult);
+            boolean selected = selectedResultFilters.contains(option);
             TextView chip = buildChip(toResultLabel(option), selected);
             chip.setOnClickListener(v -> {
-                selectedResult = option;
+                toggleResultFilter(option);
                 renderFilters();
                 applyFilters();
             });
             resultFilterContainer.addView(chip);
+        }
+    }
+
+    private void resetResultFilter() {
+        selectedResultFilters.clear();
+        selectedResultFilters.add(FILTER_ALL);
+    }
+
+    private void toggleResultFilter(String filterKey) {
+        if (FILTER_ALL.equals(filterKey)) {
+            resetResultFilter();
+            return;
+        }
+
+        if (selectedResultFilters.contains(filterKey)) {
+            selectedResultFilters.remove(filterKey);
+        } else {
+            selectedResultFilters.add(filterKey);
+        }
+
+        selectedResultFilters.remove(FILTER_ALL);
+        if (selectedResultFilters.isEmpty()) {
+            selectedResultFilters.add(FILTER_ALL);
         }
     }
 
@@ -269,16 +309,10 @@ public class FeedFragment extends Fragment {
         filteredEvents.clear();
 
         for (FeedEvent event : allEvents) {
-            boolean lineMatch = "ALL".equals(selectedLine) || safe(selectedLine).equals(safe(event.getEquipmentId()));
+            boolean lineMatch = FILTER_ALL.equals(selectedLine) || safe(selectedLine).equals(safe(event.getEquipmentId()));
             if (!lineMatch) continue;
 
-            if (!"ALL".equals(selectedResult)) {
-                FeedAdapter.LotResult lotResult = FeedAdapter.computeLotResult(event);
-                if ("PASS".equals(selectedResult) && lotResult != FeedAdapter.LotResult.PASS) continue;
-                if ("MARGINAL".equals(selectedResult) && lotResult != FeedAdapter.LotResult.MARGINAL) continue;
-                if ("FAIL".equals(selectedResult) && lotResult != FeedAdapter.LotResult.FAIL) continue;
-            }
-
+            if (!matchesResultFilters(event)) continue;
             filteredEvents.add(event);
         }
 
@@ -286,15 +320,63 @@ public class FeedFragment extends Fragment {
             adapter.submitList(filteredEvents);
         }
 
-        boolean lineFiltered = !"ALL".equals(selectedLine);
-        if (lineFiltered) {
+        boolean lineFiltered = !FILTER_ALL.equals(selectedLine);
+        boolean resultFiltered = !(selectedResultFilters.size() == 1 && selectedResultFilters.contains(FILTER_ALL));
+        if (lineFiltered || resultFiltered) {
             tvFilterNotice.setVisibility(View.VISIBLE);
-            tvFilterNotice.setText("• " + toLineLabel(selectedLine) + " 필터 적용 중");
+            tvFilterNotice.setText(buildFilterNoticeText(lineFiltered, resultFiltered));
             btnClearFilter.setVisibility(View.VISIBLE);
         } else {
             tvFilterNotice.setVisibility(View.GONE);
             btnClearFilter.setVisibility(View.GONE);
         }
+    }
+
+    private boolean matchesResultFilters(FeedEvent event) {
+        if (selectedResultFilters.contains(FILTER_ALL)) return true;
+        for (String filter : selectedResultFilters) {
+            if (matchesSingleResultFilter(event, filter)) return true;
+        }
+        return false;
+    }
+
+    private boolean matchesSingleResultFilter(FeedEvent event, String filter) {
+        switch (filter) {
+            case FILTER_PASS:
+                return event.getEventType() == FeedEvent.EventType.LOT_END
+                        && FeedAdapter.computeLotResult(event) == FeedAdapter.LotResult.PASS;
+            case FILTER_MARGINAL:
+                return event.getEventType() == FeedEvent.EventType.LOT_END
+                        && FeedAdapter.computeLotResult(event) == FeedAdapter.LotResult.MARGINAL;
+            case FILTER_FAIL:
+                return event.getEventType() == FeedEvent.EventType.LOT_END
+                        && FeedAdapter.computeLotResult(event) == FeedAdapter.LotResult.FAIL;
+            case FILTER_ORACLE:
+                return event.getEventType() == FeedEvent.EventType.ORACLE_ANALYSIS;
+            case FILTER_HW:
+                return event.getEventType() == FeedEvent.EventType.HW_ALARM;
+            default:
+                return true;
+        }
+    }
+
+    private String buildFilterNoticeText(boolean lineFiltered, boolean resultFiltered) {
+        StringBuilder sb = new StringBuilder("• ");
+        if (lineFiltered) {
+            sb.append(toLineLabel(selectedLine));
+        }
+        if (resultFiltered) {
+            if (lineFiltered) sb.append(" + ");
+            boolean first = true;
+            for (String filter : selectedResultFilters) {
+                if (FILTER_ALL.equals(filter)) continue;
+                if (!first) sb.append(", ");
+                sb.append(toResultLabel(filter));
+                first = false;
+            }
+        }
+        sb.append(" 필터 적용 중");
+        return sb.toString();
     }
 
     private FeedEvent buildFeedEvent(String equipmentId, String eventType, String payload) {
@@ -316,8 +398,13 @@ public class FeedFragment extends Fragment {
                 int pass = optInt(obj, "pass_count");
                 int fail = optInt(obj, "fail_count");
                 float yield = optFloat(obj, "yield_pct");
-                String operator = optString(obj, "operator_id", "-");
-                String recipe = optString(obj, "recipe_id", "-");
+                String operator = optString(obj, "operator_id", loggedInEmployeeId);
+                String recipe = optString(obj, "recipe_id",
+                        latestRecipeByEquipment.getOrDefault(eqId, loggedInEmployeeId));
+
+                latestRecipeByEquipment.put(eqId, recipe);
+                FeedAdapter.LotResult lotResult = computeLotResult(total, fail, yield);
+                rememberLotResult(eqId, lotId, lotResult);
 
                 return FeedEvent.lotEnd(eventId, time, eqId, lotId, total, pass, fail, yield, operator, recipe);
             }
@@ -336,13 +423,19 @@ public class FeedFragment extends Fragment {
 
             if ("oracle".equals(type)) {
                 String judgment = optString(obj, "judgment", "NORMAL");
+                String lotId = optString(obj, "lot_id", "");
                 String message = optString(obj, "ai_comment", "-");
-                FeedEvent.AnalysisLevel level = "ABNORMAL".equalsIgnoreCase(judgment)
-                        ? FeedEvent.AnalysisLevel.DANGER
-                        : FeedEvent.AnalysisLevel.WARNING;
+                FeedEvent.AnalysisLevel level = mapOracleLevel(judgment, eqId, lotId);
 
                 String[] codes = parseErrorCodes(obj.getAsJsonArray("error_codes"));
-                return FeedEvent.oracleAnalysis(eventId, time, eqId, level, message, codes);
+                return FeedEvent.oracleAnalysis(eventId, time, eqId, lotId, level, message, codes);
+            }
+
+            if ("status".equals(type)) {
+                String recipe = optString(obj, "recipe_id", "");
+                if (!recipe.trim().isEmpty()) {
+                    latestRecipeByEquipment.put(eqId, recipe);
+                }
             }
         } catch (Exception ignore) {
             return null;
@@ -400,6 +493,105 @@ public class FeedFragment extends Fragment {
         return value == null ? "" : value;
     }
 
+    private void rebuildRealtimeContextFromEvents() {
+        latestRecipeByEquipment.clear();
+        latestLotResultByEquipment.clear();
+        latestLotResultByLotKey.clear();
+
+        for (int i = allEvents.size() - 1; i >= 0; i--) {
+            FeedEvent event = allEvents.get(i);
+            if (event == null) continue;
+            if (event.getEventType() != FeedEvent.EventType.LOT_END) continue;
+
+            String eqId = safe(event.getEquipmentId());
+            String lotId = safe(event.getLotId());
+            FeedAdapter.LotResult result = computeLotResult(
+                    event.getTotalUnits(),
+                    event.getFailUnits(),
+                    event.getYieldRate()
+            );
+            rememberLotResult(eqId, lotId, result);
+
+            if (event.getRecipeId() != null && !event.getRecipeId().trim().isEmpty()) {
+                latestRecipeByEquipment.put(eqId, event.getRecipeId());
+            }
+        }
+
+        for (int i = 0; i < allEvents.size(); i++) {
+            FeedEvent event = allEvents.get(i);
+            if (event == null || event.getEventType() != FeedEvent.EventType.ORACLE_ANALYSIS) continue;
+            FeedEvent.AnalysisLevel level = mapOracleLevel("NORMAL", event.getEquipmentId(), safe(event.getLotId()));
+            if (level != event.getAnalysisLevel()) {
+                allEvents.set(i, FeedEvent.oracleAnalysis(
+                        event.getId(),
+                        event.getTime(),
+                        event.getEquipmentId(),
+                        event.getLotId(),
+                        level,
+                        event.getAnalysisMessage(),
+                        event.getErrorCodes()
+                ));
+            }
+        }
+    }
+
+    private FeedEvent.AnalysisLevel mapOracleLevel(String judgment, String equipmentId, String lotId) {
+        String j = judgment == null ? "" : judgment.trim().toUpperCase(Locale.ROOT);
+        if ("ABNORMAL".equals(j) || "DANGER".equals(j) || "CRITICAL".equals(j)) {
+            return FeedEvent.AnalysisLevel.DANGER;
+        }
+        if ("WARNING".equals(j) || "MARGINAL".equals(j)) {
+            return FeedEvent.AnalysisLevel.WARNING;
+        }
+        if ("NORMAL".equals(j) || "PASS".equals(j)) {
+            return FeedEvent.AnalysisLevel.NORMAL;
+        }
+
+        FeedAdapter.LotResult linkedResult = resolveLotResult(equipmentId, lotId);
+        if (linkedResult == FeedAdapter.LotResult.FAIL) {
+            return FeedEvent.AnalysisLevel.DANGER;
+        }
+        if (linkedResult == FeedAdapter.LotResult.MARGINAL) {
+            return FeedEvent.AnalysisLevel.WARNING;
+        }
+        if (linkedResult == FeedAdapter.LotResult.PASS) {
+            return FeedEvent.AnalysisLevel.NORMAL;
+        }
+        return FeedEvent.AnalysisLevel.WARNING;
+    }
+
+    private FeedAdapter.LotResult computeLotResult(int totalUnits, int failCount, float yieldPct) {
+        int total = Math.max(1, totalUnits);
+        int fail = Math.max(0, failCount);
+        float yield = yieldPct;
+        if (yield <= 0f && total > 0) {
+            yield = ((total - fail) * 100f) / total;
+        }
+        if (fail <= 0) return FeedAdapter.LotResult.PASS;
+        if (yield >= 95f) return FeedAdapter.LotResult.MARGINAL;
+        return FeedAdapter.LotResult.FAIL;
+    }
+
+    private void rememberLotResult(String equipmentId, String lotId, FeedAdapter.LotResult result) {
+        if (equipmentId == null || equipmentId.trim().isEmpty() || result == null) return;
+        latestLotResultByEquipment.put(equipmentId, result);
+        if (lotId != null && !lotId.trim().isEmpty()) {
+            latestLotResultByLotKey.put(equipmentId + "|" + lotId, result);
+        }
+    }
+
+    private FeedAdapter.LotResult resolveLotResult(String equipmentId, String lotId) {
+        if (equipmentId == null || equipmentId.trim().isEmpty()) {
+            return FeedAdapter.LotResult.NONE;
+        }
+        if (lotId != null && !lotId.trim().isEmpty()) {
+            FeedAdapter.LotResult byLot = latestLotResultByLotKey.get(equipmentId + "|" + lotId);
+            if (byLot != null) return byLot;
+        }
+        FeedAdapter.LotResult byEq = latestLotResultByEquipment.get(equipmentId);
+        return byEq == null ? FeedAdapter.LotResult.NONE : byEq;
+    }
+
     private int parseLineNo(String equipmentId) {
         if (equipmentId == null) return 999;
         String digits = equipmentId.replaceAll("[^0-9]", "");
@@ -420,12 +612,16 @@ public class FeedFragment extends Fragment {
 
     private String toResultLabel(String value) {
         switch (value) {
-            case "PASS":
+            case FILTER_PASS:
                 return "LOT 합격";
-            case "MARGINAL":
+            case FILTER_MARGINAL:
                 return "LOT 경계";
-            case "FAIL":
+            case FILTER_FAIL:
                 return "LOT 불합격";
+            case FILTER_ORACLE:
+                return "ORACLE 카드";
+            case FILTER_HW:
+                return "HW 알람";
             default:
                 return "전체 결과";
         }

@@ -9,7 +9,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -39,7 +38,6 @@ public class LoginActivity extends AppCompatActivity {
 
         sessionManager = new SessionManager(this);
 
-        // 이미 로그인되어 있으면 메인으로 이동
         if (sessionManager.isLoggedIn()) {
             goToMain();
             return;
@@ -52,13 +50,12 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin = findViewById(R.id.btnLogin);
         btnChangePassword = findViewById(R.id.btnChangePassword);
 
+        if (btnChangePassword != null) {
+            btnChangePassword.setVisibility(View.GONE);
+        }
+
         btnTogglePw.setOnClickListener(v -> togglePasswordVisibility());
         btnLogin.setOnClickListener(v -> handleLogin());
-
-        // 현재는 임시 처리 (나중에 비밀번호 변경 화면 연결)
-        btnChangePassword.setOnClickListener(v ->
-                Toast.makeText(this, "비밀번호 변경 기능은 다음 단계에서 연결합니다.", Toast.LENGTH_SHORT).show()
-        );
     }
 
     private void togglePasswordVisibility() {
@@ -72,7 +69,6 @@ public class LoginActivity extends AppCompatActivity {
             btnTogglePw.setImageResource(R.drawable.ic_visibility_off);
         }
 
-        // 커서를 텍스트 끝으로 유지
         etPassword.setSelection(etPassword.getText().length());
     }
 

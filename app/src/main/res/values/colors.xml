@@ -30,4 +30,12 @@
     <color name="bottom_nav_selected">#4E9CFF</color>
     <color name="bottom_nav_unselected">#8B96A5</color>
     <color name="section_divider">#A9B7CA</color>
+
+    <color name="global_alert_fail_bg">#5A0A12</color>
+    <color name="global_alert_fail_stroke">#FF5A66</color>
+    <color name="global_alert_fail_title">#FF8A93</color>
+    <color name="global_alert_marginal_bg">#4F3600</color>
+    <color name="global_alert_marginal_stroke">#F2B84B</color>
+    <color name="global_alert_marginal_title">#FFD37A</color>
+    <color name="global_alert_body_text">#FFFFFF</color>
 </resources>

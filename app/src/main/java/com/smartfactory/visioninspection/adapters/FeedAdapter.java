@@ -141,16 +141,18 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
 
             tvBadge.setText("LOT 완료");
             tvBadge.setTextColor(textColor);
-            tvTitle.setText("결과: " + badge + "  ·  " + safe(event.getLotId(), "LOT-UNKNOWN"));
+            tvTitle.setText("결과: " + badge + " · " + safe(event.getLotId(), "LOT-UNKNOWN"));
 
-            String body = String.format(Locale.getDefault(),
+            String body = String.format(
+                    Locale.getDefault(),
                     "수율 %.1f%%  (합격 %,d / 불합격 %,d / 전체 %,d)",
                     event.getYieldRate(),
                     event.getPassUnits(),
                     event.getFailUnits(),
-                    Math.max(1, event.getTotalUnits()));
+                    Math.max(1, event.getTotalUnits())
+            );
             tvBody.setText(body);
-            tvMeta.setText("작업자 " + safe(event.getOperator(), "-") + "  ·  레시피 " + safe(event.getRecipeId(), "-"));
+            tvMeta.setText("작업자 " + safe(event.getOperator(), "-") + " · 레시피 " + safe(event.getRecipeId(), "-"));
         }
 
         private void bindAlarm(FeedEvent event) {
@@ -169,14 +171,33 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
         }
 
         private void bindOracle(FeedEvent event) {
-            boolean danger = event.getAnalysisLevel() == FeedEvent.AnalysisLevel.DANGER;
-            int color = ContextCompat.getColor(itemView.getContext(), danger ? R.color.color_fail : R.color.color_marginal);
+            FeedEvent.AnalysisLevel level = event.getAnalysisLevel();
+            boolean danger = level == FeedEvent.AnalysisLevel.DANGER;
+            boolean warning = level == FeedEvent.AnalysisLevel.WARNING;
+
+            int color;
+            int bgColor;
+            String badge;
+
+            if (danger) {
+                color = ContextCompat.getColor(itemView.getContext(), R.color.color_fail);
+                bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_fail_bg);
+                badge = "오라클 분석 · 불합격";
+            } else if (warning) {
+                color = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal);
+                bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal_bg);
+                badge = "오라클 분석 · 경계";
+            } else {
+                color = ContextCompat.getColor(itemView.getContext(), R.color.color_pass);
+                bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_pass_bg);
+                badge = "오라클 분석 · 합격";
+            }
 
             card.setStrokeColor(color);
-            card.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), danger ? R.color.color_fail_bg : R.color.color_marginal_bg));
+            card.setCardBackgroundColor(bgColor);
             dot.setBackgroundColor(color);
 
-            tvBadge.setText(danger ? "오라클 분석 · 위험" : "오라클 분석 · 경고");
+            tvBadge.setText(badge);
             tvBadge.setTextColor(color);
             tvTitle.setText("분석 결과");
             tvBody.setText(safe(event.getAnalysisMessage(), "분석 코멘트 없음"));

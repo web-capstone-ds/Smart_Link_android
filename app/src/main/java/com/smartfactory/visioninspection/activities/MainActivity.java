@@ -3,8 +3,13 @@ package com.smartfactory.visioninspection.activities;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,7 +18,10 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
 import com.smartfactory.visioninspection.MqttConnectionManager;
 import com.smartfactory.visioninspection.MqttEventListener;
 import com.smartfactory.visioninspection.R;
@@ -23,7 +31,12 @@ import com.smartfactory.visioninspection.fragments.EquipmentFragment;
 import com.smartfactory.visioninspection.fragments.FeedFragment;
 import com.smartfactory.visioninspection.fragments.ReportFragment;
 import com.smartfactory.visioninspection.fragments.SettingsFragment;
+import com.smartfactory.visioninspection.utils.AlarmSettingsManager;
 import com.smartfactory.visioninspection.utils.SessionManager;
+
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements MqttEventListener {
 
@@ -39,6 +52,17 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private BottomNavigationView bottomNav;
     private SessionManager sessionManager;
     private MqttConnectionManager mqttManager;
+    private AlarmSettingsManager alarmSettingsManager;
+    private ToneGenerator toneGenerator;
+    private int toneVolume = -1;
+
+    private MaterialCardView cardGlobalAlert;
+    private TextView tvGlobalAlertTitle;
+    private TextView tvGlobalAlertBody;
+    private ImageButton btnCloseGlobalAlert;
+    private String activeAlertEquipmentId;
+
+    private final Set<String> handledAlertMessageIds = new HashSet<>();
 
     private DashboardFragment dashboardFragment;
     private EquipmentFragment equipmentFragment;
@@ -47,6 +71,18 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private SettingsFragment settingsFragment;
 
     private int currentTab = TAB_DASHBOARD;
+
+    private enum AlertSeverity {
+        FAIL, MARGINAL
+    }
+
+    private static class GlobalAlertPayload {
+        String messageId;
+        String equipmentId;
+        AlertSeverity severity;
+        String title;
+        String body;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,14 +99,20 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         bindViews();
         initFragments(savedInstanceState);
         setupBottomNavigation();
+        setupGlobalAlertUi();
 
         mqttManager = MqttConnectionManager.getInstance();
         mqttManager.setMqttEventListener(this);
         mqttManager.initAndConnect(sessionManager.getOrCreateSessionMqttClientId());
+        alarmSettingsManager = new AlarmSettingsManager(this);
     }
 
     private void bindViews() {
         bottomNav = findViewById(R.id.bottom_navigation);
+        cardGlobalAlert = findViewById(R.id.card_global_alert);
+        tvGlobalAlertTitle = findViewById(R.id.tv_global_alert_title);
+        tvGlobalAlertBody = findViewById(R.id.tv_global_alert_body);
+        btnCloseGlobalAlert = findViewById(R.id.btn_close_global_alert);
     }
 
     private void initFragments(Bundle savedInstanceState) {
@@ -188,6 +230,23 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         });
     }
 
+    private void setupGlobalAlertUi() {
+        if (cardGlobalAlert == null) return;
+
+        cardGlobalAlert.setOnClickListener(v -> {
+            if (activeAlertEquipmentId != null) {
+                openFeedWithLineFilter(activeAlertEquipmentId);
+            } else {
+                bottomNav.setSelectedItemId(R.id.nav_feed);
+            }
+            hideGlobalAlert();
+        });
+
+        if (btnCloseGlobalAlert != null) {
+            btnCloseGlobalAlert.setOnClickListener(v -> hideGlobalAlert());
+        }
+    }
+
     private void switchTo(@NonNull Fragment target) {
         FragmentTransaction tx = getSupportFragmentManager().beginTransaction();
         tx.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out);
@@ -240,6 +299,19 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         });
     }
 
+    public void playAlarmPreview() {
+        if (alarmSettingsManager == null) {
+            alarmSettingsManager = new AlarmSettingsManager(this);
+        }
+        if (alarmSettingsManager.isAlarmSoundEnabled()) {
+            playBeep(alarmSettingsManager.getAlarmVolume());
+        }
+    }
+
+    public void onAlarmSettingsChanged() {
+        // no-op: settings are read at alert time from SharedPreferences.
+    }
+
     public void logout() {
         if (mqttManager != null) {
             mqttManager.disconnectAndClose();
@@ -273,6 +345,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
                 mqttManager.disconnectAndClose();
             }
         }
+        releaseToneGenerator();
         super.onDestroy();
     }
 
@@ -293,6 +366,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     @Override
     public void onMqttEventReceived(String equipmentId, String eventType, String payload) {
         runOnUiThread(() -> {
+            handleGlobalAlertFromMqtt(equipmentId, eventType, payload);
             if (dashboardFragment != null) {
                 dashboardFragment.onMqttEvent(equipmentId, eventType, payload);
             }
@@ -317,5 +391,197 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             if (reportFragment != null) reportFragment.setMqttConnected(connected);
             if (settingsFragment != null) settingsFragment.setMqttConnected(connected);
         });
+    }
+
+    private void handleGlobalAlertFromMqtt(String equipmentId, String eventType, String payload) {
+        if (alarmSettingsManager == null) {
+            alarmSettingsManager = new AlarmSettingsManager(this);
+        }
+        GlobalAlertPayload alert = parseGlobalAlert(equipmentId, eventType, payload);
+        if (alert == null) return;
+
+        if (alert.messageId != null && !alert.messageId.trim().isEmpty()) {
+            if (handledAlertMessageIds.contains(alert.messageId)) return;
+            handledAlertMessageIds.add(alert.messageId);
+            if (handledAlertMessageIds.size() > 500) {
+                handledAlertMessageIds.clear();
+            }
+        }
+
+        boolean enabledBySeverity = alert.severity == AlertSeverity.FAIL
+                ? alarmSettingsManager.isFailAlertEnabled()
+                : alarmSettingsManager.isMarginalAlertEnabled();
+        if (!enabledBySeverity) return;
+
+        showGlobalAlert(alert);
+
+        if (alarmSettingsManager.isAlarmSoundEnabled()) {
+            playBeep(alarmSettingsManager.getAlarmVolume());
+        }
+    }
+
+    private GlobalAlertPayload parseGlobalAlert(String equipmentId, String eventType, String payload) {
+        if (eventType == null || payload == null || payload.trim().isEmpty()) return null;
+        String type = eventType.trim().toLowerCase(Locale.ROOT);
+
+        try {
+            JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
+            String messageId = optString(obj, "message_id");
+            String eqId = safe(equipmentId, optString(obj, "equipment_id"));
+            String lineLabel = toLineLabel(eqId);
+
+            if ("alarm".equals(type)) {
+                String alarmLevel = optString(obj, "alarm_level").toUpperCase(Locale.ROOT);
+                String code = safe(optString(obj, "hw_error_code"), "HW_ALARM");
+
+                GlobalAlertPayload out = new GlobalAlertPayload();
+                out.messageId = messageId;
+                out.equipmentId = eqId;
+                out.severity = "CRITICAL".equals(alarmLevel) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+                out.title = (out.severity == AlertSeverity.FAIL ? "CRITICAL 알람 발생" : "WARNING 알람 발생");
+                out.body = lineLabel + " · " + code;
+                return out;
+            }
+
+            if ("oracle".equals(type)) {
+                String judgment = optString(obj, "judgment").toUpperCase(Locale.ROOT);
+                if ("NORMAL".equals(judgment)) return null;
+
+                GlobalAlertPayload out = new GlobalAlertPayload();
+                out.messageId = messageId;
+                out.equipmentId = eqId;
+                out.severity = "DANGER".equals(judgment) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+                out.title = (out.severity == AlertSeverity.FAIL ? "오라클 위험 알람" : "오라클 경계 알람");
+                out.body = lineLabel + " · " + safe(optString(obj, "ai_comment"), "AI 분석 경고");
+                return out;
+            }
+
+            if ("lot".equals(type)) {
+                int total = optInt(obj, "total_units");
+                int fail = optInt(obj, "fail_count");
+                float yield = optFloat(obj, "yield_pct");
+                if (total <= 0 && fail <= 0) return null;
+
+                AlertSeverity severity;
+                if (fail <= 0) {
+                    return null;
+                } else if (yield >= 95f) {
+                    severity = AlertSeverity.MARGINAL;
+                } else {
+                    severity = AlertSeverity.FAIL;
+                }
+
+                GlobalAlertPayload out = new GlobalAlertPayload();
+                out.messageId = messageId;
+                out.equipmentId = eqId;
+                out.severity = severity;
+                out.title = (severity == AlertSeverity.FAIL ? "LOT 불합격 발생" : "LOT 경계 발생");
+                out.body = lineLabel + " · " + safe(optString(obj, "lot_id"), "LOT-UNKNOWN");
+                return out;
+            }
+        } catch (Exception e) {
+            Log.w("MainActivity", "Global alert parse failed", e);
+        }
+
+        return null;
+    }
+
+    private void showGlobalAlert(GlobalAlertPayload payload) {
+        if (cardGlobalAlert == null) return;
+        activeAlertEquipmentId = payload.equipmentId;
+        tvGlobalAlertTitle.setText(payload.title);
+        tvGlobalAlertBody.setText(payload.body);
+
+        if (payload.severity == AlertSeverity.FAIL) {
+            cardGlobalAlert.setCardBackgroundColor(getColorCompat(R.color.global_alert_fail_bg));
+            cardGlobalAlert.setStrokeColor(getColorCompat(R.color.global_alert_fail_stroke));
+            tvGlobalAlertTitle.setTextColor(getColorCompat(R.color.global_alert_fail_title));
+        } else {
+            cardGlobalAlert.setCardBackgroundColor(getColorCompat(R.color.global_alert_marginal_bg));
+            cardGlobalAlert.setStrokeColor(getColorCompat(R.color.global_alert_marginal_stroke));
+            tvGlobalAlertTitle.setTextColor(getColorCompat(R.color.global_alert_marginal_title));
+        }
+        tvGlobalAlertBody.setTextColor(getColorCompat(R.color.global_alert_body_text));
+        if (btnCloseGlobalAlert != null) {
+            btnCloseGlobalAlert.setColorFilter(getColorCompat(R.color.global_alert_body_text));
+        }
+
+        cardGlobalAlert.setVisibility(View.VISIBLE);
+    }
+
+    private void hideGlobalAlert() {
+        activeAlertEquipmentId = null;
+        if (cardGlobalAlert != null) {
+            cardGlobalAlert.setVisibility(View.GONE);
+        }
+    }
+
+    private void playBeep(int volume) {
+        int safeVolume = Math.max(0, Math.min(100, volume));
+        if (toneGenerator == null || toneVolume != safeVolume) {
+            releaseToneGenerator();
+            toneGenerator = new ToneGenerator(AudioManager.STREAM_ALARM, safeVolume);
+            toneVolume = safeVolume;
+        }
+        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 180);
+    }
+
+    private void releaseToneGenerator() {
+        if (toneGenerator != null) {
+            toneGenerator.release();
+            toneGenerator = null;
+            toneVolume = -1;
+        }
+    }
+
+    private int getColorCompat(int colorRes) {
+        return androidx.core.content.ContextCompat.getColor(this, colorRes);
+    }
+
+    private String toLineLabel(String equipmentId) {
+        int lineNo = parseLineNo(equipmentId);
+        if (lineNo <= 0) return safe(equipmentId, "UNKNOWN");
+        return lineNo + "라인";
+    }
+
+    private int parseLineNo(String equipmentId) {
+        if (equipmentId == null) return -1;
+        String digits = equipmentId.replaceAll("[^0-9]", "");
+        if (digits.length() >= 3) {
+            digits = digits.substring(digits.length() - 3);
+        }
+        try {
+            return Integer.parseInt(digits);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    private String optString(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return "";
+        return safe(obj.get(key).getAsString(), "");
+    }
+
+    private int optInt(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return 0;
+        try {
+            return obj.get(key).getAsInt();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private float optFloat(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) return 0f;
+        try {
+            return obj.get(key).getAsFloat();
+        } catch (Exception e) {
+            return 0f;
+        }
+    }
+
+    private String safe(String value, String fallback) {
+        if (value == null || value.trim().isEmpty()) return fallback;
+        return value.trim();
     }
 }

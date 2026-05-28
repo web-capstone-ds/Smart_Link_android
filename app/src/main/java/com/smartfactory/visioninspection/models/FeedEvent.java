@@ -8,7 +8,7 @@ public class FeedEvent {
 
     public enum EventType { LOT_END, HW_ALARM, ORACLE_ANALYSIS }
     public enum AlarmLevel { CRITICAL, WARNING }
-    public enum AnalysisLevel { DANGER, WARNING }
+    public enum AnalysisLevel { DANGER, WARNING, NORMAL }
 
     // ── 공통 필드 ──
     private String    id;
@@ -68,9 +68,17 @@ public class FeedEvent {
     public static FeedEvent oracleAnalysis(String id, String time, String equipmentId,
                                            AnalysisLevel analysisLevel,
                                            String analysisMessage, String[] errorCodes) {
+        return oracleAnalysis(id, time, equipmentId, null, analysisLevel, analysisMessage, errorCodes);
+    }
+
+    public static FeedEvent oracleAnalysis(String id, String time, String equipmentId,
+                                           String lotId,
+                                           AnalysisLevel analysisLevel,
+                                           String analysisMessage, String[] errorCodes) {
         FeedEvent e = new FeedEvent();
         e.id = id; e.time = time; e.equipmentId = equipmentId;
         e.eventType = EventType.ORACLE_ANALYSIS;
+        e.lotId = lotId;
         e.analysisLevel = analysisLevel;
         e.analysisMessage = analysisMessage;
         e.errorCodes = errorCodes;
