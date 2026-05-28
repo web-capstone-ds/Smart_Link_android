@@ -28,6 +28,7 @@ import com.smartfactory.visioninspection.bottomsheets.LotDetailBottomSheet;
 import com.smartfactory.visioninspection.models.DashboardLineState;
 import com.smartfactory.visioninspection.models.InspectionEvent;
 import com.smartfactory.visioninspection.models.User;
+import com.smartfactory.visioninspection.utils.EventHistoryStore;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
 import java.util.HashMap;
@@ -62,6 +63,7 @@ public class DashboardFragment extends Fragment {
     private int lotMarginalCount = 0;
     private int lotFailCount = 0;
     private final Set<String> countedLotKeys = new HashSet<>();
+    private EventHistoryStore historyStore;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Map<String, Runnable> blinkJobs = new HashMap<>();
@@ -73,6 +75,8 @@ public class DashboardFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_dashboard, container, false);
 
         bindViews(view);
+        initHistoryStore();
+        restorePersistedCounters();
         setupHeaderUser();
         setupRecycler();
         setupActions();
@@ -105,6 +109,25 @@ public class DashboardFragment extends Fragment {
         btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
+    
+    private void initHistoryStore() {
+        if (getContext() == null) return;
+        if (historyStore == null) {
+            historyStore = new EventHistoryStore(getContext());
+        }
+    }
+
+    private void restorePersistedCounters() {
+        if (historyStore == null) return;
+        EventHistoryStore.DashboardCounters counters = historyStore.loadDashboardCounters();
+        lotFailCount = counters.fail;
+        lotMarginalCount = counters.marginal;
+        lotPassCount = counters.pass;
+        countedLotKeys.clear();
+        if (counters.countedLotKeys != null) {
+            countedLotKeys.addAll(counters.countedLotKeys);
+        }
+    }
     private void setupRecycler() {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new InspectionCardAdapter(this::openLotBottomSheet);
@@ -118,6 +141,9 @@ public class DashboardFragment extends Fragment {
         if (user == null) return;
         tvUserId.setText(user.getEmployeeId());
         tvUserName.setText(user.getName());
+        if (tvDeptRole != null) {
+            tvDeptRole.setText(user.getDepartmentRolePhoneLabel());
+        }
     }
 
     private void setupActions() {
@@ -357,6 +383,13 @@ public class DashboardFragment extends Fragment {
             default:
                 break;
         }
+
+        persistCounters();
+    }
+
+    private void persistCounters() {
+        if (historyStore == null) return;
+        historyStore.saveDashboardCounters(lotFailCount, lotMarginalCount, lotPassCount, countedLotKeys);
     }
 
     private String optString(JsonObject obj, String key) {

@@ -29,4 +29,5 @@
     <color name="bottom_nav_bg">#111722</color>
     <color name="bottom_nav_selected">#4E9CFF</color>
     <color name="bottom_nav_unselected">#8B96A5</color>
+    <color name="section_divider">#A9B7CA</color>
 </resources>

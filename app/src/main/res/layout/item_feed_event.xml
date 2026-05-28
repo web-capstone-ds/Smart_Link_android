@@ -1,102 +1,99 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 피드 이벤트 아이템 (FeedEventCard.tsx 대응) -->
+﻿<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="10dp">
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginTop="8dp"
+    android:orientation="vertical">
 
-    <!-- 타임라인 컬럼 (점 + 세로선) -->
-    <LinearLayout
-        android:layout_width="20dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="top|center_horizontal"
-        android:layout_marginTop="2dp">
-
-        <!-- 이벤트 점 -->
-        <View
-            android:id="@+id/feed_dot"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:background="@color/color_pass" />
-    </LinearLayout>
-
-    <!-- 이벤트 내용 -->
-    <LinearLayout
-        android:layout_width="0dp"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_feed_event"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:paddingStart="10dp"
-        android:background="@drawable/bg_card_dark"
-        android:padding="12dp">
+        app:cardBackgroundColor="@color/bg_card"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/border"
+        app:strokeWidth="1dp"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
 
-        <!-- 이벤트 타입 + 장비 + 시각 행 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/feed_dot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/tv_feed_badge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="LOT 완료"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_feed_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="15:20:48"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tv_feed_event_type"
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_feed_line"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.04" />
+                android:layout_marginTop="8dp"
+                android:text="1라인 비전센서"
+                android:textColor="@color/text_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:layout_width="0dp"
+                android:id="@+id/tv_feed_title"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text=""
-                android:textSize="10sp" />
+                android:layout_marginTop="8dp"
+                android:text="결과: 합격"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tv_feed_equipment"
-                android:layout_width="wrap_content"
+                android:id="@+id/tv_feed_body"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="수율 98.2%"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tv_feed_meta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="작업자 ENG-KIM · 레시피 RCP-BGA-0.5mm"
                 android:textColor="@color/text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="monospace" />
+                android:textSize="12sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=" · "
-                android:textColor="@color/text_secondary"
-                android:textSize="10sp" />
-
-            <TextView
-                android:id="@+id/tv_feed_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- 타이틀 -->
-        <TextView
-            android:id="@+id/tv_feed_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_primary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginTop="4dp" />
-
-        <!-- 본문 -->
-        <TextView
-            android:id="@+id/tv_feed_body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:layout_marginTop="4dp"
-            android:lineSpacingExtra="2dp" />
-    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

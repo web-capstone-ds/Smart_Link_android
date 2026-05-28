@@ -1,107 +1,150 @@
 package com.smartfactory.visioninspection.adapters;
 
-import android.graphics.Color;
-import android.view.*;
-import android.widget.*;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-
+import com.google.android.material.card.MaterialCardView;
 import com.smartfactory.visioninspection.R;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * 장비 상태 목록 어댑터 (EquipmentStatus.tsx 대응)
- * data 형식: String[] { equipmentId, alias, status, yieldStr, lastCheck, currentUnit, totalUnit }
- */
 public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.ViewHolder> {
 
-    private final List<String[]> equipList;
-
-    public EquipmentAdapter(List<String[]> equipList) {
-        this.equipList = equipList;
+    public enum EquipmentState {
+        RUN, IDLE, OFF
     }
 
-    @NonNull @Override
+    public static class EquipmentUiItem {
+        public String equipmentId;
+        public int lineNo;
+        public EquipmentState state = EquipmentState.OFF;
+        public int currentUnits;
+        public int expectedUnits;
+        public String latestMessage = "Latest: 데이터 수신 대기";
+        public String timeText = "--:--:--";
+    }
+
+    public interface OnEquipmentClickListener {
+        void onEquipmentClick(EquipmentUiItem item);
+    }
+
+    private final List<EquipmentUiItem> items = new ArrayList<>();
+    private final OnEquipmentClickListener clickListener;
+
+    public EquipmentAdapter(OnEquipmentClickListener clickListener) {
+        this.clickListener = clickListener;
+    }
+
+    public void submitList(List<EquipmentUiItem> newItems) {
+        items.clear();
+        items.addAll(newItems);
+        notifyDataSetChanged();
+    }
+
+    @NonNull
+    @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_equipment, parent, false);
-        return new ViewHolder(v);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_equipment, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder h, int position) {
-        h.bind(equipList.get(position));
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        EquipmentUiItem item = items.get(position);
+        holder.bind(item);
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onEquipmentClick(item);
+            }
+        });
     }
 
-    @Override public int getItemCount() { return equipList.size(); }
+    @Override
+    public int getItemCount() {
+        return items.size();
+    }
 
-    // ── ViewHolder ───────────────────────────────────────────
     static class ViewHolder extends RecyclerView.ViewHolder {
-        View        statusDot;
-        TextView    tvEqId, tvAlias, tvStatus, tvYield, tvLastCheck;
-        ProgressBar progressBar;
-        TextView    tvProgress;
+        private final MaterialCardView card;
+        private final View dot;
+        private final TextView tvLineTitle;
+        private final TextView tvEquipmentId;
+        private final TextView tvStatus;
+        private final TextView tvLatest;
+        private final TextView tvProgress;
+        private final TextView tvTime;
+        private final ProgressBar pbProgress;
 
-        ViewHolder(@NonNull View v) {
-            super(v);
-            statusDot   = v.findViewById(R.id.eq_status_dot);
-            tvEqId      = v.findViewById(R.id.tv_eq_id);
-            tvAlias     = v.findViewById(R.id.tv_eq_alias);
-            tvStatus    = v.findViewById(R.id.tv_eq_status);
-            tvYield     = v.findViewById(R.id.tv_eq_yield);
-            tvLastCheck = v.findViewById(R.id.tv_eq_last_check);
-            progressBar = v.findViewById(R.id.progress_eq);
-            tvProgress  = v.findViewById(R.id.tv_eq_progress);
+        ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            card = itemView.findViewById(R.id.card_equipment);
+            dot = itemView.findViewById(R.id.eq_status_dot);
+            tvLineTitle = itemView.findViewById(R.id.tv_eq_alias);
+            tvEquipmentId = itemView.findViewById(R.id.tv_eq_id);
+            tvStatus = itemView.findViewById(R.id.tv_eq_status);
+            tvLatest = itemView.findViewById(R.id.tv_eq_latest);
+            tvProgress = itemView.findViewById(R.id.tv_eq_progress);
+            tvTime = itemView.findViewById(R.id.tv_eq_last_check);
+            pbProgress = itemView.findViewById(R.id.progress_eq);
         }
 
-        void bind(String[] d) {
-            // d = [equipmentId, alias, status, yieldStr, lastCheck, currentUnit, totalUnit]
-            tvEqId.setText(d[0]);
-            tvAlias.setText(d[1]);
-            tvStatus.setText(statusLabel(d[2]));
-            tvYield.setText("수율 " + d[3] + "%");
-            tvLastCheck.setText("최종 점검: " + d[4]);
+        void bind(EquipmentUiItem item) {
+            tvLineTitle.setText(item.lineNo + "라인 비전센서");
+            tvEquipmentId.setText(item.equipmentId);
+            tvLatest.setText(item.latestMessage);
+            tvTime.setText(item.timeText);
 
-            int color = statusColor(d[2]);
-            tvStatus.setTextColor(color);
-            statusDot.setBackgroundColor(color);
+            int expected = Math.max(item.expectedUnits, 1);
+            int current = Math.max(item.currentUnits, 0);
+            int progress = Math.min(100, (int) ((current * 100f) / expected));
+            pbProgress.setProgress(progress);
+            tvProgress.setText(String.format(Locale.getDefault(), "진행도 %d%%  %,d / %,d", progress, current, expected));
 
-            // 진행 바
-            try {
-                int cur   = Integer.parseInt(d[5]);
-                int total = Integer.parseInt(d[6]);
-                int pct   = total > 0 ? (int) ((cur / (float) total) * 100) : 0;
-                progressBar.setProgress(pct);
-                tvProgress.setText(String.format(Locale.getDefault(),
-                        "%,d / %,d (%d%%)", cur, total, pct));
-                progressBar.setVisibility(View.VISIBLE);
-                tvProgress.setVisibility(View.VISIBLE);
-            } catch (NumberFormatException e) {
-                progressBar.setVisibility(View.GONE);
-                tvProgress.setVisibility(View.GONE);
+            if (item.state == EquipmentState.RUN) {
+                setStatusStyle("RUN",
+                        R.color.color_pass,
+                        R.drawable.bg_status_run_chip,
+                        R.color.color_pass_bg,
+                        R.color.color_pass);
+            } else if (item.state == EquipmentState.IDLE) {
+                setStatusStyle("IDLE",
+                        R.color.color_marginal,
+                        R.drawable.bg_status_idle_chip,
+                        R.color.color_marginal_bg,
+                        R.color.color_marginal);
+            } else {
+                setStatusStyle("OFF",
+                        R.color.text_secondary,
+                        R.drawable.bg_status_off_chip,
+                        R.color.bg_card,
+                        R.color.border);
             }
         }
 
-        private static int statusColor(String status) {
-            switch (status) {
-                case "ERROR":   return Color.parseColor("#F85149");
-                case "WARNING": return Color.parseColor("#D29922");
-                case "RUNNING": return Color.parseColor("#3FB950");
-                default:        return Color.parseColor("#7D8590");
-            }
-        }
+        private void setStatusStyle(String label,
+                                    int textColorRes,
+                                    int chipBgRes,
+                                    int cardBgRes,
+                                    int strokeRes) {
+            int textColor = ContextCompat.getColor(itemView.getContext(), textColorRes);
+            int cardBgColor = ContextCompat.getColor(itemView.getContext(), cardBgRes);
+            int strokeColor = ContextCompat.getColor(itemView.getContext(), strokeRes);
 
-        private static String statusLabel(String status) {
-            switch (status) {
-                case "RUNNING": return "가동 중";
-                case "WARNING": return "경고";
-                case "ERROR":   return "오류";
-                default:        return "대기";
-            }
+            tvStatus.setText(label);
+            tvStatus.setTextColor(textColor);
+            tvStatus.setBackgroundResource(chipBgRes);
+            dot.setBackgroundColor(textColor);
+            card.setCardBackgroundColor(cardBgColor);
+            card.setStrokeColor(strokeColor);
         }
     }
 }
