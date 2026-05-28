@@ -6,6 +6,8 @@ import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -61,6 +63,9 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private TextView tvGlobalAlertBody;
     private ImageButton btnCloseGlobalAlert;
     private String activeAlertEquipmentId;
+    private static final long GLOBAL_ALERT_AUTO_HIDE_MS = 2000L;
+    private final Handler globalAlertHandler = new Handler(Looper.getMainLooper());
+    private final Runnable globalAlertAutoHideRunnable = this::hideGlobalAlert;
 
     private final Set<String> handledAlertMessageIds = new HashSet<>();
 
@@ -339,6 +344,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
 
     @Override
     protected void onDestroy() {
+        cancelGlobalAlertAutoHide();
         if (mqttManager != null) {
             mqttManager.clearMqttEventListener(this);
             if (isFinishing()) {
@@ -507,13 +513,24 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         }
 
         cardGlobalAlert.setVisibility(View.VISIBLE);
+        scheduleGlobalAlertAutoHide();
     }
 
     private void hideGlobalAlert() {
+        cancelGlobalAlertAutoHide();
         activeAlertEquipmentId = null;
         if (cardGlobalAlert != null) {
             cardGlobalAlert.setVisibility(View.GONE);
         }
+    }
+
+    private void scheduleGlobalAlertAutoHide() {
+        cancelGlobalAlertAutoHide();
+        globalAlertHandler.postDelayed(globalAlertAutoHideRunnable, GLOBAL_ALERT_AUTO_HIDE_MS);
+    }
+
+    private void cancelGlobalAlertAutoHide() {
+        globalAlertHandler.removeCallbacks(globalAlertAutoHideRunnable);
     }
 
     private void playBeep(int volume) {
