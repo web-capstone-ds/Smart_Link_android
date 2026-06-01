@@ -24,6 +24,15 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
     }
 
     private final List<FeedEvent> items = new ArrayList<>();
+    private final OnLotClickListener onLotClickListener;
+
+    public interface OnLotClickListener {
+        void onLotClick(FeedEvent event);
+    }
+
+    public FeedAdapter(OnLotClickListener onLotClickListener) {
+        this.onLotClickListener = onLotClickListener;
+    }
 
     public void submitList(List<FeedEvent> events) {
         items.clear();
@@ -40,7 +49,7 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(items.get(position));
+        holder.bind(items.get(position), onLotClickListener);
     }
 
     @Override
@@ -97,17 +106,24 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
             tvMeta = itemView.findViewById(R.id.tv_feed_meta);
         }
 
-        void bind(FeedEvent event) {
+        void bind(FeedEvent event, OnLotClickListener onLotClickListener) {
             int lineNo = parseLineNo(event.getEquipmentId());
-            tvLine.setText(lineNo > 0 ? (lineNo + "라인 비전센서") : event.getEquipmentId());
+            tvLine.setText(lineNo > 0 ? (lineNo + "\uB77C\uC778 \uBE44\uC804\uC13C\uC11C") : event.getEquipmentId());
             tvTime.setText(event.getTime());
 
             if (event.getEventType() == FeedEvent.EventType.LOT_END) {
                 bindLot(event);
+                itemView.setOnClickListener(v -> {
+                    if (onLotClickListener != null) {
+                        onLotClickListener.onLotClick(event);
+                    }
+                });
             } else if (event.getEventType() == FeedEvent.EventType.HW_ALARM) {
                 bindAlarm(event);
+                itemView.setOnClickListener(null);
             } else {
                 bindOracle(event);
+                itemView.setOnClickListener(null);
             }
         }
 
@@ -122,37 +138,37 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
                 textColor = ContextCompat.getColor(itemView.getContext(), R.color.color_fail);
                 strokeColor = textColor;
                 cardBg = ContextCompat.getColor(itemView.getContext(), R.color.color_fail_bg);
-                badge = "불합격";
+                badge = "\uBD88\uD569\uACA9";
             } else if (result == LotResult.MARGINAL) {
                 textColor = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal);
                 strokeColor = textColor;
                 cardBg = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal_bg);
-                badge = "경계";
+                badge = "\uACBD\uACC4";
             } else {
                 textColor = ContextCompat.getColor(itemView.getContext(), R.color.color_pass);
                 strokeColor = textColor;
                 cardBg = ContextCompat.getColor(itemView.getContext(), R.color.color_pass_bg);
-                badge = "합격";
+                badge = "\uD569\uACA9";
             }
 
             card.setStrokeColor(strokeColor);
             card.setCardBackgroundColor(cardBg);
             dot.setBackgroundColor(textColor);
 
-            tvBadge.setText("LOT 완료");
+            tvBadge.setText("LOT \uC644\uB8CC");
             tvBadge.setTextColor(textColor);
-            tvTitle.setText("결과: " + badge + " · " + safe(event.getLotId(), "LOT-UNKNOWN"));
+            tvTitle.setText("\uACB0\uACFC: " + badge + " \u00B7 " + safe(event.getLotId(), "LOT-UNKNOWN"));
 
             String body = String.format(
                     Locale.getDefault(),
-                    "수율 %.1f%%  (합격 %,d / 불합격 %,d / 전체 %,d)",
+                    "\uC218\uC728 %.1f%%  (\uD569\uACA9 %,d / \uBD88\uD569\uACA9 %,d / \uC804\uCCB4 %,d)",
                     event.getYieldRate(),
                     event.getPassUnits(),
                     event.getFailUnits(),
                     Math.max(1, event.getTotalUnits())
             );
             tvBody.setText(body);
-            tvMeta.setText("작업자 " + safe(event.getOperator(), "-") + " · 레시피 " + safe(event.getRecipeId(), "-"));
+            tvMeta.setText("\uC791\uC5C5\uC790 " + safe(event.getOperator(), "-") + " \u00B7 \uB808\uC2DC\uD53C " + safe(event.getRecipeId(), "-"));
         }
 
         private void bindAlarm(FeedEvent event) {
@@ -163,10 +179,10 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
             card.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), critical ? R.color.color_fail_bg : R.color.color_marginal_bg));
             dot.setBackgroundColor(color);
 
-            tvBadge.setText(critical ? "HW 알람 · CRITICAL" : "HW 알람 · WARNING");
+            tvBadge.setText(critical ? "HW \uC54C\uB78C \u00B7 CRITICAL" : "HW \uC54C\uB78C \u00B7 WARNING");
             tvBadge.setTextColor(color);
             tvTitle.setText(safe(event.getAlarmCode(), "HW_ALARM"));
-            tvBody.setText(safe(event.getAlarmDescription(), "장비 알람 발생"));
+            tvBody.setText(safe(event.getAlarmDescription(), "\uC7A5\uBE44 \uC54C\uB78C \uBC1C\uC0DD"));
             tvMeta.setText("burst_id: " + safe(event.getBurstId(), "-"));
         }
 
@@ -182,15 +198,15 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
             if (danger) {
                 color = ContextCompat.getColor(itemView.getContext(), R.color.color_fail);
                 bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_fail_bg);
-                badge = "오라클 분석 · 불합격";
+                badge = "\uC624\uB77C\uD074 \uBD84\uC11D \u00B7 \uBD88\uD569\uACA9";
             } else if (warning) {
                 color = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal);
                 bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_marginal_bg);
-                badge = "오라클 분석 · 경계";
+                badge = "\uC624\uB77C\uD074 \uBD84\uC11D \u00B7 \uACBD\uACC4";
             } else {
                 color = ContextCompat.getColor(itemView.getContext(), R.color.color_pass);
                 bgColor = ContextCompat.getColor(itemView.getContext(), R.color.color_pass_bg);
-                badge = "오라클 분석 · 합격";
+                badge = "\uC624\uB77C\uD074 \uBD84\uC11D \u00B7 \uD569\uACA9";
             }
 
             card.setStrokeColor(color);
@@ -199,19 +215,19 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
 
             tvBadge.setText(badge);
             tvBadge.setTextColor(color);
-            tvTitle.setText("분석 결과");
-            tvBody.setText(safe(event.getAnalysisMessage(), "분석 코멘트 없음"));
+            tvTitle.setText("\uBD84\uC11D \uACB0\uACFC");
+            tvBody.setText(safe(event.getAnalysisMessage(), "\uBD84\uC11D \uCF54\uBA58\uD2B8 \uC5C6\uC74C"));
 
             String[] codes = event.getErrorCodes();
             if (codes != null && codes.length > 0) {
-                StringBuilder sb = new StringBuilder("관련 코드: ");
+                StringBuilder sb = new StringBuilder("\uAD00\uB828 \uCF54\uB4DC: ");
                 for (int i = 0; i < codes.length; i++) {
                     if (i > 0) sb.append(", ");
                     sb.append(codes[i]);
                 }
                 tvMeta.setText(sb.toString());
             } else {
-                tvMeta.setText("관련 코드 없음");
+                tvMeta.setText("\uAD00\uB828 \uCF54\uB4DC \uC5C6\uC74C");
             }
         }
 
@@ -221,3 +237,4 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
         }
     }
 }
+

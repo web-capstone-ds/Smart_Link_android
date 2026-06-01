@@ -96,7 +96,8 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         setContentView(R.layout.activity_main);
 
         sessionManager = new SessionManager(this);
-        if (!sessionManager.isLoggedIn()) {
+        if (!sessionManager.isLoggedIn() || !sessionManager.isTokenValid()) {
+            sessionManager.clearSession();
             logout();
             return;
         }
@@ -110,6 +111,15 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         mqttManager.setMqttEventListener(this);
         mqttManager.initAndConnect(sessionManager.getOrCreateSessionMqttClientId());
         alarmSettingsManager = new AlarmSettingsManager(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (sessionManager != null && (!sessionManager.isLoggedIn() || !sessionManager.isTokenValid())) {
+            sessionManager.clearSession();
+            logout();
+        }
     }
 
     private void bindViews() {

@@ -21,23 +21,24 @@ import com.google.gson.JsonParser;
 import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.activities.MainActivity;
 import com.smartfactory.visioninspection.adapters.FeedAdapter;
+import com.smartfactory.visioninspection.bottomsheets.LotDetailBottomSheet;
 import com.smartfactory.visioninspection.models.FeedEvent;
+import com.smartfactory.visioninspection.models.InspectionEvent;
 import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.EventHistoryStore;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 public class FeedFragment extends Fragment {
 
@@ -47,7 +48,6 @@ public class FeedFragment extends Fragment {
     private static final String FILTER_PASS = "PASS";
     private static final String FILTER_MARGINAL = "MARGINAL";
     private static final String FILTER_FAIL = "FAIL";
-    private static final String FILTER_ORACLE = "ORACLE";
     private static final String FILTER_HW = "HW";
 
     private TextView tvUserId;
@@ -78,6 +78,8 @@ public class FeedFragment extends Fragment {
     private final Map<String, String> latestRecipeByEquipment = new HashMap<>();
     private final Map<String, FeedAdapter.LotResult> latestLotResultByEquipment = new HashMap<>();
     private final Map<String, FeedAdapter.LotResult> latestLotResultByLotKey = new HashMap<>();
+    private final Map<String, FeedEvent> latestOracleByLotKey = new HashMap<>();
+    private final Map<String, FeedEvent> latestOracleByEquipment = new HashMap<>();
 
     @Nullable
     @Override
@@ -106,7 +108,7 @@ public class FeedFragment extends Fragment {
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setHasFixedSize(true);
 
-        adapter = new FeedAdapter();
+        adapter = new FeedAdapter(this::openLotBottomSheet);
         rv.setAdapter(adapter);
 
         btnClearFilter.setOnClickListener(v -> {
@@ -252,7 +254,8 @@ public class FeedFragment extends Fragment {
             lineFilterContainer.addView(chip);
         }
 
-        String[] resultOptions = new String[]{FILTER_ALL, FILTER_PASS, FILTER_MARGINAL, FILTER_FAIL, FILTER_ORACLE, FILTER_HW};
+        // ORACLE 필터 제거 + HW 알람을 LOT 불합격 옆으로 배치
+        String[] resultOptions = new String[]{FILTER_ALL, FILTER_PASS, FILTER_MARGINAL, FILTER_FAIL, FILTER_HW};
         for (String option : resultOptions) {
             boolean selected = selectedResultFilters.contains(option);
             TextView chip = buildChip(toResultLabel(option), selected);
@@ -309,6 +312,9 @@ public class FeedFragment extends Fragment {
         filteredEvents.clear();
 
         for (FeedEvent event : allEvents) {
+            // ORACLE 카드는 리스트에 직접 표시하지 않음 (LOT 상세에서 노출)
+            if (event.getEventType() == FeedEvent.EventType.ORACLE_ANALYSIS) continue;
+
             boolean lineMatch = FILTER_ALL.equals(selectedLine) || safe(selectedLine).equals(safe(event.getEquipmentId()));
             if (!lineMatch) continue;
 
@@ -351,8 +357,6 @@ public class FeedFragment extends Fragment {
             case FILTER_FAIL:
                 return event.getEventType() == FeedEvent.EventType.LOT_END
                         && FeedAdapter.computeLotResult(event) == FeedAdapter.LotResult.FAIL;
-            case FILTER_ORACLE:
-                return event.getEventType() == FeedEvent.EventType.ORACLE_ANALYSIS;
             case FILTER_HW:
                 return event.getEventType() == FeedEvent.EventType.HW_ALARM;
             default:
@@ -361,7 +365,7 @@ public class FeedFragment extends Fragment {
     }
 
     private String buildFilterNoticeText(boolean lineFiltered, boolean resultFiltered) {
-        StringBuilder sb = new StringBuilder("• ");
+        StringBuilder sb = new StringBuilder("· ");
         if (lineFiltered) {
             sb.append(toLineLabel(selectedLine));
         }
@@ -428,7 +432,9 @@ public class FeedFragment extends Fragment {
                 FeedEvent.AnalysisLevel level = mapOracleLevel(judgment, eqId, lotId);
 
                 String[] codes = parseErrorCodes(obj.getAsJsonArray("error_codes"));
-                return FeedEvent.oracleAnalysis(eventId, time, eqId, lotId, level, message, codes);
+                FeedEvent oracleEvent = FeedEvent.oracleAnalysis(eventId, time, eqId, lotId, level, message, codes);
+                rememberOracleEvent(oracleEvent);
+                return oracleEvent;
             }
 
             if ("status".equals(type)) {
@@ -453,12 +459,18 @@ public class FeedFragment extends Fragment {
         return out;
     }
 
+    // java.time 대신 SimpleDateFormat 사용 (API 경고 제거)
     private String formatTime(String iso) {
         if (iso == null || iso.trim().isEmpty()) return "--:--:--";
         try {
-            Instant instant = Instant.parse(iso);
-            LocalDateTime ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-            return ldt.format(DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault()));
+            SimpleDateFormat isoParser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            isoParser.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date date = isoParser.parse(iso);
+            if (date == null) return iso;
+
+            SimpleDateFormat out = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            out.setTimeZone(TimeZone.getDefault());
+            return out.format(date);
         } catch (Exception ignore) {
             return iso;
         }
@@ -497,6 +509,8 @@ public class FeedFragment extends Fragment {
         latestRecipeByEquipment.clear();
         latestLotResultByEquipment.clear();
         latestLotResultByLotKey.clear();
+        latestOracleByLotKey.clear();
+        latestOracleByEquipment.clear();
 
         for (int i = allEvents.size() - 1; i >= 0; i--) {
             FeedEvent event = allEvents.get(i);
@@ -520,9 +534,11 @@ public class FeedFragment extends Fragment {
         for (int i = 0; i < allEvents.size(); i++) {
             FeedEvent event = allEvents.get(i);
             if (event == null || event.getEventType() != FeedEvent.EventType.ORACLE_ANALYSIS) continue;
+            rememberOracleEvent(event);
+
             FeedEvent.AnalysisLevel level = mapOracleLevel("NORMAL", event.getEquipmentId(), safe(event.getLotId()));
             if (level != event.getAnalysisLevel()) {
-                allEvents.set(i, FeedEvent.oracleAnalysis(
+                FeedEvent normalized = FeedEvent.oracleAnalysis(
                         event.getId(),
                         event.getTime(),
                         event.getEquipmentId(),
@@ -530,7 +546,9 @@ public class FeedFragment extends Fragment {
                         level,
                         event.getAnalysisMessage(),
                         event.getErrorCodes()
-                ));
+                );
+                allEvents.set(i, normalized);
+                rememberOracleEvent(normalized);
             }
         }
     }
@@ -618,13 +636,74 @@ public class FeedFragment extends Fragment {
                 return "LOT 경계";
             case FILTER_FAIL:
                 return "LOT 불합격";
-            case FILTER_ORACLE:
-                return "ORACLE 카드";
             case FILTER_HW:
                 return "HW 알람";
             default:
                 return "전체 결과";
         }
+    }
+
+    private void openLotBottomSheet(FeedEvent lotEvent) {
+        if (getActivity() == null || lotEvent == null) return;
+        if (lotEvent.getEventType() != FeedEvent.EventType.LOT_END) return;
+
+        SessionManager sessionManager = new SessionManager(getActivity());
+        User user = sessionManager.getCurrentUser();
+
+        FeedAdapter.LotResult lotResult = FeedAdapter.computeLotResult(lotEvent);
+        InspectionEvent.Result result = toInspectionResult(lotResult);
+
+        InspectionEvent inspectionEvent = new InspectionEvent.Builder(
+                "feed-" + safe(lotEvent.getId()),
+                safe(lotEvent.getLotId()),
+                safe(lotEvent.getTime()),
+                result
+        )
+                .equipmentId(safe(lotEvent.getEquipmentId()))
+                .recipeId(safe(lotEvent.getRecipeId()))
+                .operator(safe(lotEvent.getOperator()))
+                .errorCodes(lotEvent.getErrorCodes() == null ? new String[0] : lotEvent.getErrorCodes())
+                .build();
+
+        FeedEvent oracleEvent = resolveLinkedOracleEvent(lotEvent);
+        LotDetailBottomSheet sheet = LotDetailBottomSheet.newInstance(inspectionEvent, user, oracleEvent);
+        sheet.show(getParentFragmentManager(), LotDetailBottomSheet.TAG);
+    }
+
+    private InspectionEvent.Result toInspectionResult(FeedAdapter.LotResult lotResult) {
+        if (lotResult == FeedAdapter.LotResult.FAIL) return InspectionEvent.Result.FAIL;
+        if (lotResult == FeedAdapter.LotResult.MARGINAL) return InspectionEvent.Result.MARGINAL;
+        return InspectionEvent.Result.PASS;
+    }
+
+    private void rememberOracleEvent(FeedEvent oracleEvent) {
+        if (oracleEvent == null) return;
+        if (oracleEvent.getEventType() != FeedEvent.EventType.ORACLE_ANALYSIS) return;
+
+        String eqId = safe(oracleEvent.getEquipmentId());
+        if (!eqId.isEmpty()) {
+            latestOracleByEquipment.put(eqId, oracleEvent);
+        }
+
+        String lotId = safe(oracleEvent.getLotId());
+        if (!eqId.isEmpty() && !lotId.isEmpty()) {
+            latestOracleByLotKey.put(eqId + "|" + lotId, oracleEvent);
+        }
+    }
+
+    private FeedEvent resolveLinkedOracleEvent(FeedEvent lotEvent) {
+        if (lotEvent == null) return null;
+        String eqId = safe(lotEvent.getEquipmentId());
+        String lotId = safe(lotEvent.getLotId());
+
+        if (!eqId.isEmpty() && !lotId.isEmpty()) {
+            FeedEvent byLot = latestOracleByLotKey.get(eqId + "|" + lotId);
+            if (byLot != null) return byLot;
+        }
+        if (!eqId.isEmpty()) {
+            return latestOracleByEquipment.get(eqId);
+        }
+        return null;
     }
 
     private int dp(int value) {
