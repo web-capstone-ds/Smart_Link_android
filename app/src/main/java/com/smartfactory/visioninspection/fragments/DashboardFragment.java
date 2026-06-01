@@ -76,6 +76,7 @@ public class DashboardFragment extends Fragment {
 
         bindViews(view);
         initHistoryStore();
+        checkAndHandleCounterDateRollover(null);
         restorePersistedCounters();
         setupHeaderUser();
         setupRecycler();
@@ -85,6 +86,14 @@ public class DashboardFragment extends Fragment {
 
         recyclerView = view.findViewById(R.id.recycler_dashboard);
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        checkAndHandleCounterDateRollover(null);
+        restorePersistedCounters();
+        updateSummaryCounts();
     }
 
     @Override
@@ -109,7 +118,6 @@ public class DashboardFragment extends Fragment {
         btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
-    
     private void initHistoryStore() {
         if (getContext() == null) return;
         if (historyStore == null) {
@@ -128,6 +136,15 @@ public class DashboardFragment extends Fragment {
             countedLotKeys.addAll(counters.countedLotKeys);
         }
     }
+
+    private void checkAndHandleCounterDateRollover(@Nullable String lotTimestampIso) {
+        if (historyStore == null) return;
+        boolean reset = historyStore.ensureCounterDate(lotTimestampIso);
+        if (reset) {
+            restorePersistedCounters();
+        }
+    }
+
     private void setupRecycler() {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new InspectionCardAdapter(this::openLotBottomSheet);
@@ -158,6 +175,10 @@ public class DashboardFragment extends Fragment {
                 ((MainActivity) getActivity()).toggleThemeMode();
             }
         });
+
+        tvCountFail.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.FAIL));
+        tvCountMarginal.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.MARGINAL));
+        tvCountPass.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.PASS));
     }
 
     private void openLotBottomSheet(DashboardLineState state) {
@@ -241,7 +262,8 @@ public class DashboardFragment extends Fragment {
                             failCount,
                             ts
                     );
-                    accumulateLotOutcome(equipmentId, lotId, outcome);
+
+                    accumulateLotOutcome(equipmentId, lotId, outcome, ts);
                     runLotBlinkAndAdvance(equipmentId, outcome);
                     updateSummaryCounts();
                 }
@@ -344,6 +366,9 @@ public class DashboardFragment extends Fragment {
     }
 
     private void updateSummaryCounts() {
+        // 앱이 켜진 상태에서 자정 넘어가도 자동 리셋
+        checkAndHandleCounterDateRollover(null);
+
         if (adapter == null) return;
         List<DashboardLineState> items = adapter.getCurrentItems();
         int idle = 0;
@@ -356,11 +381,14 @@ public class DashboardFragment extends Fragment {
 
         tvCountFail.setText(lotFailCount + "\n불합격");
         tvCountMarginal.setText(lotMarginalCount + "\n경계");
-        tvCountPass.setText(lotPassCount + "\n운전중");
+        tvCountPass.setText(lotPassCount + "\n합격");
         tvCountIdle.setText(idle + "\n대기");
     }
 
-    private void accumulateLotOutcome(String equipmentId, String lotId, LotOutcome outcome) {
+    private void accumulateLotOutcome(String equipmentId, String lotId, LotOutcome outcome, @Nullable String lotTimestampIso) {
+        // LOT timestamp 기준으로 운영일 롤오버 체크 (KST)
+        checkAndHandleCounterDateRollover(lotTimestampIso);
+
         if (outcome == null || outcome == LotOutcome.UNKNOWN) return;
 
         String safeEq = equipmentId == null ? "unknown-eq" : equipmentId.trim();
@@ -403,6 +431,12 @@ public class DashboardFragment extends Fragment {
             return obj.get(key).getAsInt();
         } catch (Exception ignore) {
             return 0;
+        }
+    }
+
+    private void openFeedQuickFilter(FeedFragment.QuickFilter filter) {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).openFeedWithQuickFilter(filter);
         }
     }
 }

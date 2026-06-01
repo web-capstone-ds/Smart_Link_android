@@ -611,4 +611,14 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         if (value == null || value.trim().isEmpty()) return fallback;
         return value.trim();
     }
+
+    public void openFeedWithQuickFilter(FeedFragment.QuickFilter filter) {
+        bottomNav.setSelectedItemId(R.id.nav_feed);
+        bottomNav.post(() -> {
+            if (feedFragment != null) {
+                feedFragment.applyDashboardQuickFilter(filter);
+            }
+        });
+    }
+
 }

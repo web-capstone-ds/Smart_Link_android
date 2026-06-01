@@ -710,4 +710,25 @@ public class FeedFragment extends Fragment {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(value * density);
     }
+
+    public enum QuickFilter {
+        PASS, MARGINAL, FAIL
+    }
+
+    //대시보드 빠른 필터 추가
+    public void applyDashboardQuickFilter(QuickFilter filter) {
+        selectedLine = FILTER_ALL; // 전체 라인
+        selectedResultFilters.clear();
+
+        if (filter == QuickFilter.FAIL) {
+            selectedResultFilters.add(FILTER_FAIL);
+        } else if (filter == QuickFilter.MARGINAL) {
+            selectedResultFilters.add(FILTER_MARGINAL);
+        } else {
+            selectedResultFilters.add(FILTER_PASS);
+        }
+
+        renderFilters();
+        applyFilters();
+    }
 }
