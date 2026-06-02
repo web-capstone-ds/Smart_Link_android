@@ -1,5 +1,6 @@
 package com.smartfactory.visioninspection.adapters;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -172,14 +173,16 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
         }
 
         private void bindAlarm(FeedEvent event) {
-            boolean critical = event.getAlarmLevel() == FeedEvent.AlarmLevel.CRITICAL;
-            int color = ContextCompat.getColor(itemView.getContext(), critical ? R.color.color_fail : R.color.color_marginal);
+            int color = Color.parseColor("#9CA6B3");
+            int bgColor = Color.parseColor("#151B25");
+            int strokeColor = Color.parseColor("#354154");
+            int dotColor = Color.parseColor("#7D8590");
 
-            card.setStrokeColor(color);
-            card.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), critical ? R.color.color_fail_bg : R.color.color_marginal_bg));
-            dot.setBackgroundColor(color);
+            card.setStrokeColor(strokeColor);
+            card.setCardBackgroundColor(bgColor);
+            dot.setBackgroundColor(dotColor);
 
-            tvBadge.setText(critical ? "HW \uC54C\uB78C \u00B7 CRITICAL" : "HW \uC54C\uB78C \u00B7 WARNING");
+            tvBadge.setText(event.getAlarmLevel() == FeedEvent.AlarmLevel.CRITICAL ? "HW \uC54C\uB78C \u00B7 CRITICAL" : "HW \uC54C\uB78C \u00B7 WARNING");
             tvBadge.setTextColor(color);
             tvTitle.setText(safe(event.getAlarmCode(), "HW_ALARM"));
             tvBody.setText(safe(event.getAlarmDescription(), "\uC7A5\uBE44 \uC54C\uB78C \uBC1C\uC0DD"));

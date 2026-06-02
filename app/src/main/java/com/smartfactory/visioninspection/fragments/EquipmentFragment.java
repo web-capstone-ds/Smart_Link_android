@@ -160,7 +160,10 @@ public class EquipmentFragment extends Fragment {
         } else if ("IDLE".equals(status)) {
             item.state = EquipmentAdapter.EquipmentState.IDLE;
             item.latestMessage = "Latest: 대기 상태";
-        } else if ("STOP".equals(status) || "OFF".equals(status)) {
+        } else if ("STOP".equals(status)) {
+            item.state = EquipmentAdapter.EquipmentState.OFF;
+            item.latestMessage = "Latest: 장비 정지";
+        } else if ("OFF".equals(status)) {
             item.state = EquipmentAdapter.EquipmentState.OFF;
             item.latestMessage = "Latest: 장비 꺼짐";
         }

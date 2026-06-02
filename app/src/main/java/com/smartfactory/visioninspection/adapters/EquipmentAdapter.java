@@ -117,16 +117,16 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
                         R.color.color_pass);
             } else if (item.state == EquipmentState.IDLE) {
                 setStatusStyle("IDLE",
-                        R.color.color_marginal,
-                        R.drawable.bg_status_idle_chip,
-                        R.color.color_marginal_bg,
-                        R.color.color_marginal);
-            } else {
-                setStatusStyle("OFF",
                         R.color.text_secondary,
-                        R.drawable.bg_status_off_chip,
+                        R.drawable.bg_status_idle_chip,
                         R.color.bg_card,
                         R.color.border);
+            } else {
+                setStatusStyle("OFF",
+                        R.color.color_fail,
+                        R.drawable.bg_status_off_chip,
+                        R.color.color_fail_bg,
+                        R.color.color_fail);
             }
         }
 

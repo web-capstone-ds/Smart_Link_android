@@ -181,7 +181,7 @@
             android:paddingEnd="12dp"
             android:paddingBottom="6dp"
             android:text="● IDLE 0"
-            android:textColor="@color/color_marginal"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -196,7 +196,7 @@
             android:paddingEnd="12dp"
             android:paddingBottom="6dp"
             android:text="● OFF 0"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/color_fail"
             android:textSize="12sp"
             android:textStyle="bold" />
 

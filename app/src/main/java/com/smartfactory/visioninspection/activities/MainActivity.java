@@ -36,8 +36,10 @@ import com.smartfactory.visioninspection.fragments.SettingsFragment;
 import com.smartfactory.visioninspection.utils.AlarmSettingsManager;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements MqttEventListener {
@@ -63,11 +65,13 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private TextView tvGlobalAlertBody;
     private ImageButton btnCloseGlobalAlert;
     private String activeAlertEquipmentId;
+    private FeedFragment.QuickFilter activeAlertQuickFilter;
     private static final long GLOBAL_ALERT_AUTO_HIDE_MS = 2000L;
     private final Handler globalAlertHandler = new Handler(Looper.getMainLooper());
     private final Runnable globalAlertAutoHideRunnable = this::hideGlobalAlert;
 
     private final Set<String> handledAlertMessageIds = new HashSet<>();
+    private final Map<String, String> latestStatusByEquipment = new HashMap<>();
 
     private DashboardFragment dashboardFragment;
     private EquipmentFragment equipmentFragment;
@@ -87,6 +91,8 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         AlertSeverity severity;
         String title;
         String body;
+        boolean hwAlert;
+        FeedFragment.QuickFilter quickFilter;
     }
 
     @Override
@@ -249,7 +255,11 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         if (cardGlobalAlert == null) return;
 
         cardGlobalAlert.setOnClickListener(v -> {
-            if (activeAlertEquipmentId != null) {
+            if (activeAlertQuickFilter != null && activeAlertEquipmentId != null) {
+                openFeedWithLineQuickFilter(activeAlertEquipmentId, activeAlertQuickFilter);
+            } else if (activeAlertQuickFilter != null) {
+                openFeedWithQuickFilter(activeAlertQuickFilter);
+            } else if (activeAlertEquipmentId != null) {
                 openFeedWithLineFilter(activeAlertEquipmentId);
             } else {
                 bottomNav.setSelectedItemId(R.id.nav_feed);
@@ -424,10 +434,12 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             }
         }
 
-        boolean enabledBySeverity = alert.severity == AlertSeverity.FAIL
-                ? alarmSettingsManager.isFailAlertEnabled()
-                : alarmSettingsManager.isMarginalAlertEnabled();
-        if (!enabledBySeverity) return;
+        boolean enabled = alert.hwAlert
+                ? alarmSettingsManager.isHwAlertEnabled()
+                : (alert.severity == AlertSeverity.FAIL
+                    ? alarmSettingsManager.isFailAlertEnabled()
+                    : alarmSettingsManager.isMarginalAlertEnabled());
+        if (!enabled) return;
 
         showGlobalAlert(alert);
 
@@ -454,8 +466,26 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
                 out.messageId = messageId;
                 out.equipmentId = eqId;
                 out.severity = "CRITICAL".equals(alarmLevel) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+                out.hwAlert = true;
+                out.quickFilter = FeedFragment.QuickFilter.HW;
                 out.title = (out.severity == AlertSeverity.FAIL ? "CRITICAL 알람 발생" : "WARNING 알람 발생");
                 out.body = lineLabel + " · " + code;
+                return out;
+            }
+
+            if ("status".equals(type)) {
+                String status = optString(obj, "equipment_status").toUpperCase(Locale.ROOT);
+                String timestamp = optString(obj, "timestamp");
+                if (!rememberStatusAndShouldAlert(eqId, status)) return null;
+
+                GlobalAlertPayload out = new GlobalAlertPayload();
+                out.messageId = safe(messageId, "status-" + eqId + "-" + safe(timestamp, status));
+                out.equipmentId = eqId;
+                out.severity = AlertSeverity.FAIL;
+                out.title = "HW 알람 발생";
+                out.body = lineLabel + " · 장비 정지";
+                out.hwAlert = true;
+                out.quickFilter = FeedFragment.QuickFilter.HW;
                 return out;
             }
 
@@ -505,6 +535,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private void showGlobalAlert(GlobalAlertPayload payload) {
         if (cardGlobalAlert == null) return;
         activeAlertEquipmentId = payload.equipmentId;
+        activeAlertQuickFilter = payload.quickFilter;
         tvGlobalAlertTitle.setText(payload.title);
         tvGlobalAlertBody.setText(payload.body);
 
@@ -529,6 +560,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private void hideGlobalAlert() {
         cancelGlobalAlertAutoHide();
         activeAlertEquipmentId = null;
+        activeAlertQuickFilter = null;
         if (cardGlobalAlert != null) {
             cardGlobalAlert.setVisibility(View.GONE);
         }
@@ -619,6 +651,26 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
                 feedFragment.applyDashboardQuickFilter(filter);
             }
         });
+    }
+
+    public void openFeedWithLineQuickFilter(String equipmentId, FeedFragment.QuickFilter filter) {
+        if (equipmentId == null || equipmentId.trim().isEmpty()) return;
+
+        bottomNav.setSelectedItemId(R.id.nav_feed);
+        bottomNav.post(() -> {
+            if (feedFragment != null) {
+                feedFragment.applyEquipmentQuickFilter(equipmentId, filter);
+            }
+        });
+    }
+
+    private boolean rememberStatusAndShouldAlert(String equipmentId, String status) {
+        if (equipmentId == null || equipmentId.trim().isEmpty()) return false;
+
+        String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
+        String previous = latestStatusByEquipment.put(equipmentId, normalized);
+        if (!"STOP".equals(normalized)) return false;
+        return previous == null || !"STOP".equals(previous);
     }
 
 }

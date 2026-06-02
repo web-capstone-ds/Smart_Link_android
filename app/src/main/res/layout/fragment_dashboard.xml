@@ -230,7 +230,7 @@
                 android:gravity="center"
                 android:includeFontPadding="false"
                 android:lineSpacingExtra="1dp"
-                android:text="0&#10;IDLE"
+                android:text="0&#10;정지/대기"
                 android:textAlignment="center"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"

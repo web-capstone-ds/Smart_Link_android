@@ -104,7 +104,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             state.setResult(DashboardLineState.LineResult.IDLE);
             state.setEventMessage("대기");
         } else if ("STOP".equals(equipmentStatus)) {
-            state.setResult(DashboardLineState.LineResult.FAIL);
+            state.setResult(DashboardLineState.LineResult.STOP);
             state.setEventMessage("장비 정지");
         }
 
@@ -255,6 +255,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
         if (result == DashboardLineState.LineResult.FAIL) return 0;
         if (result == DashboardLineState.LineResult.MARGINAL) return 1;
         if (result == DashboardLineState.LineResult.PASS) return 2;
+        if (result == DashboardLineState.LineResult.STOP) return 3;
         return 3;
     }
 
@@ -348,7 +349,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
                 dotColor = Color.parseColor("#7D8590");
                 textColor = Color.parseColor("#9CA6B3");
                 badgeBg = Color.parseColor("#267D8590");
-                statusLabel = "대기";
+                statusLabel = item.getResult() == DashboardLineState.LineResult.STOP ? "정지" : "대기";
                 card.setCardBackgroundColor(Color.parseColor("#151B25"));
             }
 

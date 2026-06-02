@@ -80,6 +80,7 @@ public class FeedFragment extends Fragment {
     private final Map<String, FeedAdapter.LotResult> latestLotResultByLotKey = new HashMap<>();
     private final Map<String, FeedEvent> latestOracleByLotKey = new HashMap<>();
     private final Map<String, FeedEvent> latestOracleByEquipment = new HashMap<>();
+    private final Map<String, String> latestStatusByEquipment = new HashMap<>();
 
     @Nullable
     @Override
@@ -391,7 +392,9 @@ public class FeedFragment extends Fragment {
             JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
 
             String eventId = optString(obj, "message_id", "feed-" + System.currentTimeMillis());
-            String time = formatTime(optString(obj, "timestamp", ""));
+            String timestamp = optString(obj, "timestamp", "");
+            long occurredAtMillis = parseEventTimeMillis(timestamp);
+            String time = formatTime(timestamp);
             String eqId = (equipmentId == null || equipmentId.trim().isEmpty())
                     ? optString(obj, "equipment_id", "UNKNOWN")
                     : equipmentId;
@@ -410,7 +413,8 @@ public class FeedFragment extends Fragment {
                 FeedAdapter.LotResult lotResult = computeLotResult(total, fail, yield);
                 rememberLotResult(eqId, lotId, lotResult);
 
-                return FeedEvent.lotEnd(eventId, time, eqId, lotId, total, pass, fail, yield, operator, recipe);
+                return FeedEvent.lotEnd(eventId, time, eqId, lotId, total, pass, fail, yield, operator, recipe)
+                        .withOccurredAtMillis(occurredAtMillis);
             }
 
             if ("alarm".equals(type)) {
@@ -422,7 +426,8 @@ public class FeedFragment extends Fragment {
                         ? FeedEvent.AlarmLevel.CRITICAL
                         : FeedEvent.AlarmLevel.WARNING;
 
-                return FeedEvent.hwAlarm(eventId, time, eqId, code, level, desc, burst);
+                return FeedEvent.hwAlarm(eventId, time, eqId, code, level, desc, burst)
+                        .withOccurredAtMillis(occurredAtMillis);
             }
 
             if ("oracle".equals(type)) {
@@ -433,6 +438,7 @@ public class FeedFragment extends Fragment {
 
                 String[] codes = parseErrorCodes(obj.getAsJsonArray("error_codes"));
                 FeedEvent oracleEvent = FeedEvent.oracleAnalysis(eventId, time, eqId, lotId, level, message, codes);
+                oracleEvent.withOccurredAtMillis(occurredAtMillis);
                 rememberOracleEvent(oracleEvent);
                 return oracleEvent;
             }
@@ -441,6 +447,21 @@ public class FeedFragment extends Fragment {
                 String recipe = optString(obj, "recipe_id", "");
                 if (!recipe.trim().isEmpty()) {
                     latestRecipeByEquipment.put(eqId, recipe);
+                }
+                String status = optString(obj, "equipment_status", "").toUpperCase(Locale.ROOT);
+                if (rememberStatusAndShouldEmitHwAlarm(eqId, status)) {
+                    String ts = optString(obj, "timestamp", "");
+                    long statusOccurredAt = parseEventTimeMillis(ts);
+                    String id = optString(obj, "message_id", "status-" + eqId + "-" + safe(ts));
+                    return FeedEvent.hwAlarm(
+                            id,
+                            formatTime(ts),
+                            eqId,
+                            "EQUIPMENT_STOP",
+                            FeedEvent.AlarmLevel.CRITICAL,
+                            "장비 정지 상태 진입",
+                            "-"
+                    ).withOccurredAtMillis(statusOccurredAt);
                 }
             }
         } catch (Exception ignore) {
@@ -474,6 +495,34 @@ public class FeedFragment extends Fragment {
         } catch (Exception ignore) {
             return iso;
         }
+    }
+
+    private long parseEventTimeMillis(String iso) {
+        if (iso == null || iso.trim().isEmpty()) return System.currentTimeMillis();
+
+        String value = iso.trim();
+        String[] patterns = new String[]{
+                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                "yyyy-MM-dd'T'HH:mm:ssXXX",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd HH:mm:ss"
+        };
+
+        for (String pattern : patterns) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);
+                sdf.setLenient(false);
+                if (pattern.contains("'Z'")) {
+                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                }
+                Date parsed = sdf.parse(value);
+                if (parsed != null) return parsed.getTime();
+            } catch (Exception ignore) {
+            }
+        }
+
+        return System.currentTimeMillis();
     }
 
     private String optString(JsonObject obj, String key, String fallback) {
@@ -610,6 +659,15 @@ public class FeedFragment extends Fragment {
         return byEq == null ? FeedAdapter.LotResult.NONE : byEq;
     }
 
+    private boolean rememberStatusAndShouldEmitHwAlarm(String equipmentId, String status) {
+        if (equipmentId == null || equipmentId.trim().isEmpty()) return false;
+
+        String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
+        String previous = latestStatusByEquipment.put(equipmentId, normalized);
+        if (!"STOP".equals(normalized)) return false;
+        return previous == null || !"STOP".equals(previous);
+    }
+
     private int parseLineNo(String equipmentId) {
         if (equipmentId == null) return 999;
         String digits = equipmentId.replaceAll("[^0-9]", "");
@@ -712,7 +770,7 @@ public class FeedFragment extends Fragment {
     }
 
     public enum QuickFilter {
-        PASS, MARGINAL, FAIL
+        PASS, MARGINAL, FAIL, HW
     }
 
     //대시보드 빠른 필터 추가
@@ -724,6 +782,26 @@ public class FeedFragment extends Fragment {
             selectedResultFilters.add(FILTER_FAIL);
         } else if (filter == QuickFilter.MARGINAL) {
             selectedResultFilters.add(FILTER_MARGINAL);
+        } else if (filter == QuickFilter.HW) {
+            selectedResultFilters.add(FILTER_HW);
+        } else {
+            selectedResultFilters.add(FILTER_PASS);
+        }
+
+        renderFilters();
+        applyFilters();
+    }
+
+    public void applyEquipmentQuickFilter(String equipmentId, QuickFilter filter) {
+        selectedLine = (equipmentId == null || equipmentId.trim().isEmpty()) ? FILTER_ALL : equipmentId;
+        selectedResultFilters.clear();
+
+        if (filter == QuickFilter.FAIL) {
+            selectedResultFilters.add(FILTER_FAIL);
+        } else if (filter == QuickFilter.MARGINAL) {
+            selectedResultFilters.add(FILTER_MARGINAL);
+        } else if (filter == QuickFilter.HW) {
+            selectedResultFilters.add(FILTER_HW);
         } else {
             selectedResultFilters.add(FILTER_PASS);
         }

@@ -20,12 +20,16 @@ import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.EventHistoryStore;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class ReportFragment extends Fragment {
 
@@ -202,15 +206,20 @@ public class ReportFragment extends Fragment {
 
         List<FeedEvent> all = historyStore.loadFeedEvents();
         List<FeedEvent> lotEvents = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = dailyMode ? today : today.minusDays(6);
+        Set<String> seenLotKeys = new HashSet<>();
 
         for (FeedEvent e : all) {
-            if (e.getEventType() == FeedEvent.EventType.LOT_END) {
+            if (e.getEventType() == FeedEvent.EventType.LOT_END && isInReportScope(e, startDate, today)) {
+                String key = safe(e.getEquipmentId(), "UNKNOWN") + "|" + safe(e.getLotId(), "LOT-UNKNOWN");
+                if (seenLotKeys.contains(key)) continue;
+                seenLotKeys.add(key);
                 lotEvents.add(e);
             }
         }
 
-        int scopeSize = dailyMode ? Math.min(20, lotEvents.size()) : lotEvents.size();
-        List<FeedEvent> scope = lotEvents.subList(0, scopeSize);
+        List<FeedEvent> scope = lotEvents;
 
         int totalLots = scope.size();
         int passLots = 0;
@@ -236,13 +245,10 @@ public class ReportFragment extends Fragment {
 
         if (dailyMode) {
             tvReportTitle.setText("일일 LOT 검사 보고서");
-            LocalDate date = LocalDate.now();
-            tvReportDate.setText(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())));
+            tvReportDate.setText(today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())));
         } else {
             tvReportTitle.setText("주간 LOT 검사 보고서");
-            LocalDate end = LocalDate.now();
-            LocalDate start = end.minusDays(6);
-            tvReportDate.setText(start + " ~ " + end);
+            tvReportDate.setText(startDate + " ~ " + today);
         }
 
         tvLotTotal.setText(String.valueOf(totalLots));
@@ -265,5 +271,22 @@ public class ReportFragment extends Fragment {
         }
 
         tvReceivedAt.setText("서버 수신 완료 · " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault())));
+    }
+
+    private boolean isInReportScope(FeedEvent event, LocalDate startDate, LocalDate endDate) {
+        LocalDate eventDate = toEventDate(event);
+        return !eventDate.isBefore(startDate) && !eventDate.isAfter(endDate);
+    }
+
+    private LocalDate toEventDate(FeedEvent event) {
+        long occurredAt = event == null ? 0L : event.getOccurredAtMillis();
+        if (occurredAt <= 0L) return LocalDate.now();
+        return Instant.ofEpochMilli(occurredAt)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    private String safe(String value, String fallback) {
+        return (value == null || value.trim().isEmpty()) ? fallback : value.trim();
     }
 }

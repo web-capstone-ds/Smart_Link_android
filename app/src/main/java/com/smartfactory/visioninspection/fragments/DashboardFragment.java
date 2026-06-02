@@ -179,10 +179,22 @@ public class DashboardFragment extends Fragment {
         tvCountFail.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.FAIL));
         tvCountMarginal.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.MARGINAL));
         tvCountPass.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.PASS));
+        tvCountIdle.setOnClickListener(v -> openFeedQuickFilter(FeedFragment.QuickFilter.HW));
     }
 
     private void openLotBottomSheet(DashboardLineState state) {
         if (getActivity() == null) return;
+        if (state != null && (state.getResult() == DashboardLineState.LineResult.IDLE
+                || state.getResult() == DashboardLineState.LineResult.STOP)) {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).openFeedWithLineQuickFilter(
+                        state.getEquipmentId(),
+                        FeedFragment.QuickFilter.HW
+                );
+            }
+            return;
+        }
+
         SessionManager sm = new SessionManager(getActivity());
         User user = sm.getCurrentUser();
 
@@ -374,7 +386,8 @@ public class DashboardFragment extends Fragment {
         int idle = 0;
 
         for (DashboardLineState item : items) {
-            if (item.getResult() == DashboardLineState.LineResult.IDLE) {
+            if (item.getResult() == DashboardLineState.LineResult.IDLE
+                    || item.getResult() == DashboardLineState.LineResult.STOP) {
                 idle++;
             }
         }
@@ -382,7 +395,7 @@ public class DashboardFragment extends Fragment {
         tvCountFail.setText(lotFailCount + "\n불합격");
         tvCountMarginal.setText(lotMarginalCount + "\n경계");
         tvCountPass.setText(lotPassCount + "\n합격");
-        tvCountIdle.setText(idle + "\n대기");
+        tvCountIdle.setText(idle + "\n정지/대기");
     }
 
     private void accumulateLotOutcome(String equipmentId, String lotId, LotOutcome outcome, @Nullable String lotTimestampIso) {

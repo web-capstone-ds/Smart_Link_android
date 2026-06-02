@@ -37,6 +37,7 @@ public class SettingsFragment extends Fragment {
     private SwitchCompat swAlarmSound;
     private SwitchCompat swFailAlert;
     private SwitchCompat swMarginalAlert;
+    private SwitchCompat swHwAlert;
     private SeekBar seekAlarmVolume;
     private TextView tvAlarmVolume;
 
@@ -91,6 +92,7 @@ public class SettingsFragment extends Fragment {
         swAlarmSound = view.findViewById(R.id.sw_alarm_sound);
         swFailAlert = view.findViewById(R.id.sw_fail_alert);
         swMarginalAlert = view.findViewById(R.id.sw_marginal_alert);
+        swHwAlert = view.findViewById(R.id.sw_hw_alert);
         seekAlarmVolume = view.findViewById(R.id.seek_alarm_volume);
         tvAlarmVolume = view.findViewById(R.id.tv_alarm_volume);
 
@@ -149,6 +151,12 @@ public class SettingsFragment extends Fragment {
             notifyAlarmSettingChanged();
         });
 
+        swHwAlert.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (bindingAlarmUi) return;
+            alarmSettingsManager.setHwAlertEnabled(isChecked);
+            notifyAlarmSettingChanged();
+        });
+
         seekAlarmVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -175,11 +183,13 @@ public class SettingsFragment extends Fragment {
         boolean soundEnabled = alarmSettingsManager.isAlarmSoundEnabled();
         boolean failEnabled = alarmSettingsManager.isFailAlertEnabled();
         boolean marginalEnabled = alarmSettingsManager.isMarginalAlertEnabled();
+        boolean hwEnabled = alarmSettingsManager.isHwAlertEnabled();
         int volume = alarmSettingsManager.getAlarmVolume();
 
         swAlarmSound.setChecked(soundEnabled);
         swFailAlert.setChecked(failEnabled);
         swMarginalAlert.setChecked(marginalEnabled);
+        swHwAlert.setChecked(hwEnabled);
         seekAlarmVolume.setProgress(volume);
         seekAlarmVolume.setEnabled(soundEnabled);
         tvAlarmVolume.setText(volume + "%");

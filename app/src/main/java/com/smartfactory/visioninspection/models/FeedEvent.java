@@ -15,6 +15,7 @@ public class FeedEvent {
     private String    time;
     private String    equipmentId;
     private EventType eventType;
+    private long      occurredAtMillis;
 
     // ── LOT_END 필드 ──
     private String  lotId;
@@ -45,6 +46,7 @@ public class FeedEvent {
                                    String operator, String recipeId) {
         FeedEvent e = new FeedEvent();
         e.id = id; e.time = time; e.equipmentId = equipmentId;
+        e.occurredAtMillis = System.currentTimeMillis();
         e.eventType = EventType.LOT_END;
         e.lotId = lotId; e.totalUnits = totalUnits;
         e.passUnits = passUnits; e.failUnits = failUnits;
@@ -58,6 +60,7 @@ public class FeedEvent {
                                     String alarmDescription, String burstId) {
         FeedEvent e = new FeedEvent();
         e.id = id; e.time = time; e.equipmentId = equipmentId;
+        e.occurredAtMillis = System.currentTimeMillis();
         e.eventType = EventType.HW_ALARM;
         e.alarmCode = alarmCode; e.alarmLevel = alarmLevel;
         e.alarmDescription = alarmDescription; e.burstId = burstId;
@@ -77,6 +80,7 @@ public class FeedEvent {
                                            String analysisMessage, String[] errorCodes) {
         FeedEvent e = new FeedEvent();
         e.id = id; e.time = time; e.equipmentId = equipmentId;
+        e.occurredAtMillis = System.currentTimeMillis();
         e.eventType = EventType.ORACLE_ANALYSIS;
         e.lotId = lotId;
         e.analysisLevel = analysisLevel;
@@ -90,6 +94,7 @@ public class FeedEvent {
     public String        getTime()            { return time; }
     public String        getEquipmentId()     { return equipmentId; }
     public EventType     getEventType()       { return eventType; }
+    public long          getOccurredAtMillis(){ return occurredAtMillis; }
     public String        getLotId()           { return lotId; }
     public int           getTotalUnits()      { return totalUnits; }
     public int           getPassUnits()       { return passUnits; }
@@ -104,4 +109,9 @@ public class FeedEvent {
     public AnalysisLevel getAnalysisLevel()   { return analysisLevel; }
     public String        getAnalysisMessage() { return analysisMessage; }
     public String[]      getErrorCodes()      { return errorCodes; }
+
+    public FeedEvent withOccurredAtMillis(long occurredAtMillis) {
+        this.occurredAtMillis = occurredAtMillis > 0 ? occurredAtMillis : System.currentTimeMillis();
+        return this;
+    }
 }

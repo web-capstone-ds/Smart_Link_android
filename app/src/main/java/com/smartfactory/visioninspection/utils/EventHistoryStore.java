@@ -199,6 +199,7 @@ public class EventHistoryStore {
         FeedEventRecord r = new FeedEventRecord();
         r.id = e.getId();
         r.time = e.getTime();
+        r.occurredAtMillis = e.getOccurredAtMillis();
         r.equipmentId = e.getEquipmentId();
         r.eventType = e.getEventType() != null ? e.getEventType().name() : "";
         r.lotId = e.getLotId();
@@ -235,7 +236,7 @@ public class EventHistoryStore {
                             r.yieldRate,
                             safe(r.operator, "-"),
                             safe(r.recipeId, "-")
-                    );
+                    ).withOccurredAtMillis(r.occurredAtMillis);
                 case HW_ALARM:
                     FeedEvent.AlarmLevel level = "CRITICAL".equalsIgnoreCase(r.alarmLevel)
                             ? FeedEvent.AlarmLevel.CRITICAL
@@ -248,7 +249,7 @@ public class EventHistoryStore {
                             level,
                             safe(r.alarmDescription, "-"),
                             safe(r.burstId, "-")
-                    );
+                    ).withOccurredAtMillis(r.occurredAtMillis);
                 case ORACLE_ANALYSIS:
                     FeedEvent.AnalysisLevel aLevel;
                     if ("DANGER".equalsIgnoreCase(r.analysisLevel)) {
@@ -266,7 +267,7 @@ public class EventHistoryStore {
                             aLevel,
                             safe(r.analysisMessage, "-"),
                             r.errorCodes == null ? new String[0] : r.errorCodes
-                    );
+                    ).withOccurredAtMillis(r.occurredAtMillis);
                 default:
                     return null;
             }
@@ -282,6 +283,7 @@ public class EventHistoryStore {
     private static class FeedEventRecord {
         String id;
         String time;
+        long occurredAtMillis;
         String equipmentId;
         String eventType;
         String lotId;

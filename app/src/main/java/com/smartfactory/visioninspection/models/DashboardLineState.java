@@ -2,7 +2,7 @@ package com.smartfactory.visioninspection.models;
 
 public class DashboardLineState {
 
-    public enum LineResult { FAIL, MARGINAL, PASS, IDLE }
+    public enum LineResult { FAIL, MARGINAL, PASS, IDLE, STOP }
 
     private String equipmentId;
     private int lineNo;
