@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -416,7 +417,9 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         String type = eventType.trim().toLowerCase(Locale.ROOT);
 
         try {
-            JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
+            JsonElement parsed = JsonParser.parseString(payload);
+            if (parsed == null || !parsed.isJsonObject()) return null;
+            JsonObject obj = parsed.getAsJsonObject();
             String messageId = optString(obj, "message_id");
             String eqId = safe(equipmentId, optString(obj, "equipment_id"));
             String lineLabel = toLineLabel(eqId);

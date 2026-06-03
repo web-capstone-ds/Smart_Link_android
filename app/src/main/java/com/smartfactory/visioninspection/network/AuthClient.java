@@ -27,7 +27,7 @@ public final class AuthClient {
 
     private static String normalizeBaseUrl(String baseUrl) {
         if (baseUrl == null || baseUrl.trim().isEmpty()) {
-            return "http://10.0.2.2:8080/";
+            return "http://13.209.10.148:8080/api/v1/";
         }
         String trimmed = baseUrl.trim();
         return trimmed.endsWith("/") ? trimmed : (trimmed + "/");

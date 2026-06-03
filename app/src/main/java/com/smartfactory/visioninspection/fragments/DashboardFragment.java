@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.smartfactory.visioninspection.R;
@@ -25,6 +26,7 @@ import com.smartfactory.visioninspection.activities.MainActivity;
 import com.smartfactory.visioninspection.adapters.InspectionCardAdapter;
 import com.smartfactory.visioninspection.adapters.InspectionCardAdapter.LotOutcome;
 import com.smartfactory.visioninspection.bottomsheets.LotDetailBottomSheet;
+import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.DashboardLineState;
 import com.smartfactory.visioninspection.models.InspectionEvent;
 import com.smartfactory.visioninspection.models.User;
@@ -236,7 +238,18 @@ public class DashboardFragment extends Fragment {
         getActivity().runOnUiThread(() -> {
             try {
                 String type = eventType == null ? "" : eventType.trim().toLowerCase();
-                JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
+                if ("recommendation".equals(type)) {
+                    ControlRecommendation recommendation = ControlRecommendation.fromPayload(equipmentId, payload);
+                    if (recommendation != null) {
+                        adapter.applyRecommendationEvent(equipmentId, recommendation);
+                        updateSummaryCounts();
+                    }
+                    return;
+                }
+
+                JsonElement parsed = JsonParser.parseString(payload);
+                if (parsed == null || !parsed.isJsonObject()) return;
+                JsonObject obj = parsed.getAsJsonObject();
 
                 if ("alarm".equals(type)) {
                     String level = optString(obj, "alarm_level");

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
 import com.smartfactory.visioninspection.R;
+import com.smartfactory.visioninspection.models.ControlRecommendation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
         public int expectedUnits;
         public String latestMessage = "Latest: 데이터 수신 대기";
         public String timeText = "--:--:--";
+        public ControlRecommendation recommendation;
     }
 
     public interface OnEquipmentClickListener {
@@ -80,6 +82,10 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
         private final TextView tvEquipmentId;
         private final TextView tvStatus;
         private final TextView tvLatest;
+        private final View recommendationLayout;
+        private final TextView tvRecommendationTitle;
+        private final TextView tvRecommendationReason;
+        private final TextView tvRecommendationActions;
         private final TextView tvProgress;
         private final TextView tvTime;
         private final ProgressBar pbProgress;
@@ -92,6 +98,10 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             tvEquipmentId = itemView.findViewById(R.id.tv_eq_id);
             tvStatus = itemView.findViewById(R.id.tv_eq_status);
             tvLatest = itemView.findViewById(R.id.tv_eq_latest);
+            recommendationLayout = itemView.findViewById(R.id.layout_eq_recommendation);
+            tvRecommendationTitle = itemView.findViewById(R.id.tv_eq_recommendation_title);
+            tvRecommendationReason = itemView.findViewById(R.id.tv_eq_recommendation_reason);
+            tvRecommendationActions = itemView.findViewById(R.id.tv_eq_recommendation_actions);
             tvProgress = itemView.findViewById(R.id.tv_eq_progress);
             tvTime = itemView.findViewById(R.id.tv_eq_last_check);
             pbProgress = itemView.findViewById(R.id.progress_eq);
@@ -102,6 +112,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             tvEquipmentId.setText(item.equipmentId);
             tvLatest.setText(item.latestMessage);
             tvTime.setText(item.timeText);
+            bindRecommendation(item.recommendation);
 
             int expected = Math.max(item.expectedUnits, 1);
             int current = Math.max(item.currentUnits, 0);
@@ -128,6 +139,25 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
                         R.color.color_fail_bg,
                         R.color.color_fail);
             }
+        }
+
+        private void bindRecommendation(ControlRecommendation recommendation) {
+            if (recommendation == null || !recommendation.isOpen()) {
+                recommendationLayout.setVisibility(View.GONE);
+                return;
+            }
+
+            recommendationLayout.setVisibility(View.VISIBLE);
+            if (recommendation.isCritical()) {
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_critical);
+                tvRecommendationTitle.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.color_fail));
+            } else {
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_warning);
+                tvRecommendationTitle.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.color_marginal));
+            }
+            tvRecommendationTitle.setText(recommendation.getBannerTitle());
+            tvRecommendationReason.setText(recommendation.getReason());
+            tvRecommendationActions.setText(recommendation.getSuggestedActionLabel());
         }
 
         private void setStatusStyle(String label,

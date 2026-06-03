@@ -2,7 +2,13 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
-val authBaseUrl = (project.findProperty("AUTH_BASE_URL") as String?) ?: "http://10.0.2.2:8080/"
+// Web backend for user authentication. AuthApi appends "auth/login" to this base URL.
+val cloudAuthBaseUrl = (project.findProperty("AUTH_BASE_URL") as String?) ?: "http://13.209.10.148:8080/api/v1/"
+
+// MQTT is separate from the web backend. Mobile defaults to the current laptop broker IP.
+val mobileMqttBrokerUrl = (project.findProperty("MQTT_BROKER_URL") as String?) ?: "tcp:"//ip주소 입력해야함
+val emulatorAuthBaseUrl = (project.findProperty("EMULATOR_AUTH_BASE_URL") as String?) ?: cloudAuthBaseUrl
+val emulatorMqttBrokerUrl = (project.findProperty("EMULATOR_MQTT_BROKER_URL") as String?) ?: "tcp://10.0.2.2:1883"
 
 android {
     namespace = "com.smartfactory.visioninspection"
@@ -14,9 +20,22 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "AUTH_BASE_URL", "\"$authBaseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "target"
+    productFlavors {
+        create("mobile") {
+            dimension = "target"
+            buildConfigField("String", "AUTH_BASE_URL", "\"$cloudAuthBaseUrl\"")
+            buildConfigField("String", "MQTT_BROKER_URL", "\"$mobileMqttBrokerUrl\"")
+        }
+        create("emulator") {
+            dimension = "target"
+            buildConfigField("String", "AUTH_BASE_URL", "\"$emulatorAuthBaseUrl\"")
+            buildConfigField("String", "MQTT_BROKER_URL", "\"$emulatorMqttBrokerUrl\"")
+        }
     }
 
     buildTypes {

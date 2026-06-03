@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.card.MaterialCardView;
 import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.StatusUpdateEvent;
+import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.DashboardLineState;
 
 import java.util.ArrayList;
@@ -145,6 +146,15 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
 
         state.setEventMessage((aiComment != null && !aiComment.isEmpty()) ? aiComment : "Oracle 분석 결과 " + j);
         state.setTimeText(toTimeText(timestamp));
+        state.touch(System.currentTimeMillis());
+        sortAndNotify();
+    }
+
+    public void applyRecommendationEvent(String equipmentId, ControlRecommendation recommendation) {
+        if (equipmentId == null || recommendation == null) return;
+
+        DashboardLineState state = getOrCreate(equipmentId);
+        state.setRecommendation(recommendation.isOpen() ? recommendation : null);
         state.touch(System.currentTimeMillis());
         sortAndNotify();
     }
@@ -297,6 +307,10 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
         private final TextView tvLineAlias;
         private final TextView tvStatus;
         private final TextView tvEvent;
+        private final View recommendationLayout;
+        private final TextView tvRecommendationTitle;
+        private final TextView tvRecommendationReason;
+        private final TextView tvRecommendationActions;
         private final ProgressBar pbProgress;
         private final TextView tvProgress;
         private final TextView tvLot;
@@ -310,6 +324,10 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             tvLineAlias = itemView.findViewById(R.id.tv_line_alias);
             tvStatus = itemView.findViewById(R.id.tv_status_badge);
             tvEvent = itemView.findViewById(R.id.tv_event_message);
+            recommendationLayout = itemView.findViewById(R.id.layout_recommendation);
+            tvRecommendationTitle = itemView.findViewById(R.id.tv_recommendation_title);
+            tvRecommendationReason = itemView.findViewById(R.id.tv_recommendation_reason);
+            tvRecommendationActions = itemView.findViewById(R.id.tv_recommendation_actions);
             pbProgress = itemView.findViewById(R.id.pb_progress);
             tvProgress = itemView.findViewById(R.id.tv_progress);
             tvLot = itemView.findViewById(R.id.tv_lot_id);
@@ -362,6 +380,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             tvStatus.setTextColor(textColor);
             tvStatus.setBackgroundColor(badgeBg);
             tvEvent.setText(item.getEventMessage());
+            bindRecommendation(item.getRecommendation());
 
             int current = Math.max(item.getCurrentUnits(), 0);
             int expected = Math.max(item.getExpectedUnits(), 1);
@@ -372,6 +391,28 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
 
             tvLot.setText(item.getLotId());
             tvTime.setText(item.getTimeText());
+        }
+
+        private void bindRecommendation(ControlRecommendation recommendation) {
+            if (recommendation == null || !recommendation.isOpen()) {
+                recommendationLayout.setVisibility(View.GONE);
+                return;
+            }
+
+            int titleColor;
+            if (recommendation.isCritical()) {
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_critical);
+                titleColor = Color.parseColor("#FF6C6C");
+            } else {
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_warning);
+                titleColor = Color.parseColor("#E8B142");
+            }
+
+            recommendationLayout.setVisibility(View.VISIBLE);
+            tvRecommendationTitle.setText(recommendation.getBannerTitle());
+            tvRecommendationTitle.setTextColor(titleColor);
+            tvRecommendationReason.setText(recommendation.getReason());
+            tvRecommendationActions.setText(recommendation.getSuggestedActionLabel());
         }
     }
 }

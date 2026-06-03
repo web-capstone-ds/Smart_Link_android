@@ -14,12 +14,14 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.StatusUpdateEvent;
 import com.smartfactory.visioninspection.activities.MainActivity;
 import com.smartfactory.visioninspection.adapters.EquipmentAdapter;
+import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
@@ -184,8 +186,23 @@ public class EquipmentFragment extends Fragment {
         EquipmentAdapter.EquipmentUiItem item = getOrCreate(equipmentId);
 
         try {
-            JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
             String type = eventType.trim().toLowerCase(Locale.ROOT);
+            if ("recommendation".equals(type)) {
+                ControlRecommendation recommendation = ControlRecommendation.fromPayload(equipmentId, payload);
+                if (recommendation != null) {
+                    item.recommendation = recommendation.isOpen() ? recommendation : null;
+                    item.timeText = toTimeText(recommendation.getTimestamp());
+                }
+                renderListAndSummary();
+                return;
+            }
+
+            JsonElement parsed = JsonParser.parseString(payload);
+            if (parsed == null || !parsed.isJsonObject()) {
+                renderListAndSummary();
+                return;
+            }
+            JsonObject obj = parsed.getAsJsonObject();
 
             if ("alarm".equals(type)) {
                 String level = upper(optString(obj, "alarm_level"));

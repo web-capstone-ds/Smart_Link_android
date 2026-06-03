@@ -3,6 +3,9 @@ package com.smartfactory.visioninspection;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttCallback;
@@ -17,7 +20,7 @@ import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 public final class MqttConnectionManager {
     private static final String TAG = "MQTT_SPEC_MANAGER";
 
-    private static final String BROKER_URL = "tcp://10.0.2.2:1883";
+    private static final String BROKER_URL = BuildConfig.MQTT_BROKER_URL;
     private static final String USERNAME = "mobile_app";
     private static final String PASSWORD = "testpass123";
     private static final String SUB_TOPIC_ALL = "ds/#";
@@ -65,6 +68,14 @@ public final class MqttConnectionManager {
     }
 
     public void initAndConnect(String clientId) {
+        if (!isBrokerConfigured()) {
+            connected = false;
+            connecting = false;
+            Log.w(TAG, "MQTT broker URL is not configured. MQTT connection skipped.");
+            notifyConnectionChanged(false);
+            return;
+        }
+
         synchronized (lock) {
             if (mqttClient != null && mqttClient.isConnected()) {
                 connected = true;
@@ -177,6 +188,9 @@ public final class MqttConnectionManager {
                 if (parts.length >= 3 && localListener != null) {
                     String eqId = parts[1];
                     String eventType = parts[2];
+                    if (!"recommendation".equals(eventType) && isControlRecommendationPayload(payload)) {
+                        eventType = "recommendation";
+                    }
 
                     try {
                         localListener.onMqttEventReceived(eqId, eventType, payload);
@@ -228,11 +242,28 @@ public final class MqttConnectionManager {
         };
     }
 
+    private boolean isControlRecommendationPayload(String payload) {
+        if (payload == null || payload.trim().isEmpty()) return false;
+        try {
+            JsonElement parsed = JsonParser.parseString(payload);
+            if (parsed == null || !parsed.isJsonObject()) return false;
+            JsonObject obj = parsed.getAsJsonObject();
+            if (!obj.has("event_type") || obj.get("event_type").isJsonNull()) return false;
+            return "CONTROL_RECOMMENDATION".equalsIgnoreCase(obj.get("event_type").getAsString());
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
     private void notifyConnectionChanged(boolean isConnected) {
         MqttEventListener localListener = listener;
         if (localListener != null) {
             localListener.onMqttConnectionChanged(isConnected);
         }
+    }
+
+    private boolean isBrokerConfigured() {
+        return BROKER_URL != null && !BROKER_URL.trim().isEmpty();
     }
 
     private void safeCloseClient(MqttClient client) {
