@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_phone">#E6EAF0</color>
-    <color name="bg_card">#F7F9FC</color>
-    <color name="bg_card_fail">#FFF1F1</color>
-    <color name="bg_header">#E6EAF0</color>
-    <color name="bg_input">#F9FBFE</color>
+    <color name="bg_phone">#0D1117</color>
+    <color name="bg_card">#161B22</color>
+    <color name="bg_card_fail">#1A0808</color>
+    <color name="bg_header">#0D1117</color>
+    <color name="bg_input">#0D1117</color>
 
-    <color name="text_primary">#121821</color>
-    <color name="text_secondary">#616C79</color>
-    <color name="text_hint">#8B97A7</color>
+    <color name="text_primary">#E6EDF3</color>
+    <color name="text_secondary">#7D8590</color>
+    <color name="text_hint">#4D5562</color>
 
-    <color name="border">#C7D0DB</color>
-    <color name="border_light">#D9E1EA</color>
+    <color name="border">#30363D</color>
+    <color name="border_light">#21262D</color>
 
-    <color name="color_pass">#1EA249</color>
-    <color name="color_fail">#E94343</color>
-    <color name="color_marginal">#B88119</color>
-    <color name="color_info">#3A8BFF</color>
+    <color name="color_pass">#3FB950</color>
+    <color name="color_fail">#F85149</color>
+    <color name="color_marginal">#D29922</color>
+    <color name="color_info">#58A6FF</color>
 
-    <color name="color_pass_bg">#1A1EA249</color>
-    <color name="color_fail_bg">#1AE94343</color>
-    <color name="color_marginal_bg">#1AB88119</color>
-    <color name="color_info_bg">#1A3A8BFF</color>
+    <color name="color_pass_bg">#1A3FB950</color>
+    <color name="color_fail_bg">#1AF85149</color>
+    <color name="color_marginal_bg">#1AD29922</color>
+    <color name="color_info_bg">#1A58A6FF</color>
 
-    <color name="status_bar">#DDE3EB</color>
-    <color name="nav_bar">#111722</color>
+    <color name="status_bar">#0D1117</color>
+    <color name="nav_bar">#0D1117</color>
 
-    <color name="bottom_nav_bg">#111722</color>
-    <color name="bottom_nav_selected">#4E9CFF</color>
-    <color name="bottom_nav_unselected">#8B96A5</color>
-    <color name="section_divider">#A9B7CA</color>
+    <color name="bottom_nav_bg">#161B22</color>
+    <color name="bottom_nav_selected">#58A6FF</color>
+    <color name="bottom_nav_unselected">#7D8590</color>
+    <color name="section_divider">#2F3E52</color>
 
-    <color name="global_alert_fail_bg">#5A0A12</color>
+    <color name="global_alert_fail_bg">#42070D</color>
     <color name="global_alert_fail_stroke">#FF5A66</color>
     <color name="global_alert_fail_title">#FF8A93</color>
-    <color name="global_alert_marginal_bg">#4F3600</color>
+    <color name="global_alert_marginal_bg">#3E2A00</color>
     <color name="global_alert_marginal_stroke">#F2B84B</color>
     <color name="global_alert_marginal_title">#FFD37A</color>
     <color name="global_alert_body_text">#FFFFFF</color>

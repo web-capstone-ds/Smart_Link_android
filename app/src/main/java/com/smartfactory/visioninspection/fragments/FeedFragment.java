@@ -62,7 +62,6 @@ public class FeedFragment extends Fragment {
     private LinearLayout resultFilterContainer;
 
     private ImageButton btnLogout;
-    private ImageButton btnThemeToggle;
 
     private final List<FeedEvent> allEvents = new ArrayList<>();
     private final List<FeedEvent> filteredEvents = new ArrayList<>();
@@ -143,7 +142,6 @@ public class FeedFragment extends Fragment {
         resultFilterContainer = view.findViewById(R.id.result_filter_container);
 
         btnLogout = view.findViewById(R.id.btn_logout);
-        btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
     private void setupHeaderActions() {
@@ -153,11 +151,6 @@ public class FeedFragment extends Fragment {
             }
         });
 
-        btnThemeToggle.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).toggleThemeMode();
-            }
-        });
     }
 
     private void setupHeaderUser() {

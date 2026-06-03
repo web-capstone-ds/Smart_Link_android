@@ -55,7 +55,6 @@ public class ReportFragment extends Fragment {
     private TextView tvSummary;
 
     private ImageButton btnLogout;
-    private ImageButton btnThemeToggle;
 
     private EventHistoryStore historyStore;
     private boolean dailyMode = true;
@@ -129,7 +128,6 @@ public class ReportFragment extends Fragment {
         tvSummary = view.findViewById(R.id.tv_report_summary);
 
         btnLogout = view.findViewById(R.id.btn_logout);
-        btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
     private void setupHeaderActions() {
@@ -139,11 +137,6 @@ public class ReportFragment extends Fragment {
             }
         });
 
-        btnThemeToggle.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).toggleThemeMode();
-            }
-        });
     }
 
     private void setupHeaderUser() {

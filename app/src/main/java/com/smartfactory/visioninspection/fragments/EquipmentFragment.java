@@ -45,7 +45,6 @@ public class EquipmentFragment extends Fragment {
     private TextView tvTotal;
 
     private ImageButton btnLogout;
-    private ImageButton btnThemeToggle;
 
     private EquipmentAdapter adapter;
     private final Map<String, EquipmentAdapter.EquipmentUiItem> stateMap = new HashMap<>();
@@ -91,7 +90,6 @@ public class EquipmentFragment extends Fragment {
         tvTotal = view.findViewById(R.id.tv_eq_total);
 
         btnLogout = view.findViewById(R.id.btn_logout);
-        btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
     private void setupHeaderActions() {
@@ -101,11 +99,6 @@ public class EquipmentFragment extends Fragment {
             }
         });
 
-        btnThemeToggle.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).toggleThemeMode();
-            }
-        });
     }
 
     private void setupRecycler(View view) {

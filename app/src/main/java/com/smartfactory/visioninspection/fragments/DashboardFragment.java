@@ -56,7 +56,6 @@ public class DashboardFragment extends Fragment {
     private TextView tvCountIdle;
     private TextView tvLiveState;
     private ImageButton btnLogout;
-    private ImageButton btnThemeToggle;
 
     private boolean mqttConnected = false;
     private int lotPassCount = 0;
@@ -115,7 +114,6 @@ public class DashboardFragment extends Fragment {
         tvCountIdle = view.findViewById(R.id.tv_count_idle);
         tvLiveState = view.findViewById(R.id.tv_live_state);
         btnLogout = view.findViewById(R.id.btn_logout);
-        btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
     }
 
     private void initHistoryStore() {
@@ -167,12 +165,6 @@ public class DashboardFragment extends Fragment {
         btnLogout.setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).logout();
-            }
-        });
-
-        btnThemeToggle.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).toggleThemeMode();
             }
         });
 

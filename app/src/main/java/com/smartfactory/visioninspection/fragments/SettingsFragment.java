@@ -43,7 +43,6 @@ public class SettingsFragment extends Fragment {
 
     private Button btnLogout;
     private ImageButton btnHeaderLogout;
-    private ImageButton btnThemeToggle;
 
     private AlarmSettingsManager alarmSettingsManager;
     private boolean mqttConnected;
@@ -97,7 +96,6 @@ public class SettingsFragment extends Fragment {
         tvAlarmVolume = view.findViewById(R.id.tv_alarm_volume);
 
         btnHeaderLogout = view.findViewById(R.id.btn_logout);
-        btnThemeToggle = view.findViewById(R.id.btn_theme_toggle);
         btnLogout = view.findViewById(R.id.btn_logout_bottom);
     }
 
@@ -118,12 +116,6 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupActions() {
-        btnThemeToggle.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).toggleThemeMode();
-            }
-        });
-
         View.OnClickListener logoutAction = v -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).logout();
