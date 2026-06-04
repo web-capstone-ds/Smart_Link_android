@@ -176,6 +176,19 @@ public final class MqttConnectionManager {
         }
     }
 
+    public void sendAlarmAck(String eqId, String targetBurstId) {
+        if (eqId == null || eqId.trim().isEmpty()) return;
+        String safeBurstId = targetBurstId == null ? "" : targetBurstId.trim();
+        String payload = "{"
+                + "\"event_type\":\"CONTROL_CMD\","
+                + "\"equipment_id\":\"" + escapeJson(eqId.trim()) + "\","
+                + "\"command\":\"ALARM_ACK\","
+                + "\"issued_by\":\"MOBILE_APP\","
+                + "\"target_burst_id\":\"" + escapeJson(safeBurstId) + "\""
+                + "}";
+        sendControlCommand(eqId.trim(), payload);
+    }
+
     private MqttCallback createCallback() {
         return new MqttCallback() {
             @Override
@@ -253,6 +266,11 @@ public final class MqttConnectionManager {
         } catch (Exception ignore) {
             return false;
         }
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private void notifyConnectionChanged(boolean isConnected) {

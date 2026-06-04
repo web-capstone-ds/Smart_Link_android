@@ -15,6 +15,7 @@ import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.StatusUpdateEvent;
 import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.DashboardLineState;
+import com.smartfactory.visioninspection.models.ThresholdProposal;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -116,8 +117,11 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
     public void applyAlarmEvent(String equipmentId, String alarmLevel, String alarmCode, String alarmDetail, String timestamp) {
         DashboardLineState state = getOrCreate(equipmentId);
         String level = safeUpper(alarmLevel);
+        boolean recipeNotice = "RECIPE_CHANGED_NOTICE".equalsIgnoreCase(alarmCode);
 
-        if ("CRITICAL".equals(level)) {
+        if (recipeNotice) {
+            state.setResult(DashboardLineState.LineResult.PASS);
+        } else if ("CRITICAL".equals(level)) {
             state.setResult(DashboardLineState.LineResult.FAIL);
         } else {
             state.setResult(DashboardLineState.LineResult.MARGINAL);
@@ -128,6 +132,14 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
         state.setEventMessage(msg);
         state.setLastErrorCode(alarmCode);
         state.setTimeText(toTimeText(timestamp));
+        state.touch(System.currentTimeMillis());
+        sortAndNotify();
+    }
+
+    public void applyAlarmClearEvent(String equipmentId) {
+        if (equipmentId == null) return;
+        DashboardLineState state = getOrCreate(equipmentId);
+        state.setLastErrorCode(null);
         state.touch(System.currentTimeMillis());
         sortAndNotify();
     }
@@ -155,6 +167,15 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
 
         DashboardLineState state = getOrCreate(equipmentId);
         state.setRecommendation(recommendation.isOpen() ? recommendation : null);
+        state.touch(System.currentTimeMillis());
+        sortAndNotify();
+    }
+
+    public void applyThresholdProposalEvent(String equipmentId, ThresholdProposal proposal) {
+        if (equipmentId == null) return;
+
+        DashboardLineState state = getOrCreate(equipmentId);
+        state.setThresholdProposal(proposal != null && proposal.isPending() ? proposal : null);
         state.touch(System.currentTimeMillis());
         sortAndNotify();
     }
@@ -380,7 +401,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             tvStatus.setTextColor(textColor);
             tvStatus.setBackgroundColor(badgeBg);
             tvEvent.setText(item.getEventMessage());
-            bindRecommendation(item.getRecommendation());
+            bindProposal(item.getThresholdProposal(), item.getRecommendation());
 
             int current = Math.max(item.getCurrentUnits(), 0);
             int expected = Math.max(item.getExpectedUnits(), 1);
@@ -393,7 +414,17 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             tvTime.setText(item.getTimeText());
         }
 
-        private void bindRecommendation(ControlRecommendation recommendation) {
+        private void bindProposal(ThresholdProposal proposal, ControlRecommendation recommendation) {
+            if (proposal != null && proposal.isPending()) {
+                recommendationLayout.setVisibility(View.VISIBLE);
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_warning);
+                tvRecommendationTitle.setText(proposal.getBannerTitle());
+                tvRecommendationTitle.setTextColor(Color.parseColor("#E8B142"));
+                tvRecommendationReason.setText(proposal.getBannerReason());
+                tvRecommendationActions.setText(proposal.getBannerDetail());
+                return;
+            }
+
             if (recommendation == null || !recommendation.isOpen()) {
                 recommendationLayout.setVisibility(View.GONE);
                 return;

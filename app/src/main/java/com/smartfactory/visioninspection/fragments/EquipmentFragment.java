@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,8 +23,10 @@ import com.smartfactory.visioninspection.StatusUpdateEvent;
 import com.smartfactory.visioninspection.activities.MainActivity;
 import com.smartfactory.visioninspection.adapters.EquipmentAdapter;
 import com.smartfactory.visioninspection.models.ControlRecommendation;
+import com.smartfactory.visioninspection.models.ThresholdProposal;
 import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.SessionManager;
+import com.smartfactory.visioninspection.utils.ThresholdProposalStore;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -51,6 +54,7 @@ public class EquipmentFragment extends Fragment {
     private EquipmentAdapter adapter;
     private final Map<String, EquipmentAdapter.EquipmentUiItem> stateMap = new HashMap<>();
     private boolean mqttConnected;
+    private ThresholdProposalStore thresholdProposalStore;
 
     @Nullable
     @Override
@@ -65,6 +69,7 @@ public class EquipmentFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         bindViews(view);
         setupHeaderActions();
+        thresholdProposalStore = new ThresholdProposalStore(requireContext());
         setupRecycler(view);
         seedDefaultLines();
         setupHeaderUser();
@@ -187,6 +192,11 @@ public class EquipmentFragment extends Fragment {
 
         try {
             String type = eventType.trim().toLowerCase(Locale.ROOT);
+            if ("alarm".equals(type) && payload.trim().isEmpty()) {
+                item.recommendation = null;
+                renderListAndSummary();
+                return;
+            }
             if ("recommendation".equals(type)) {
                 ControlRecommendation recommendation = ControlRecommendation.fromPayload(equipmentId, payload);
                 if (recommendation != null) {
@@ -207,8 +217,12 @@ public class EquipmentFragment extends Fragment {
             if ("alarm".equals(type)) {
                 String level = upper(optString(obj, "alarm_level"));
                 String code = optString(obj, "hw_error_code");
+                boolean recipeNotice = "RECIPE_CHANGED_NOTICE".equalsIgnoreCase(code);
                 item.latestMessage = "Latest: " + (code.isEmpty() ? "HW 알람" : code);
-                if ("CRITICAL".equals(level)) {
+                if (recipeNotice) {
+                    String status = upper(optString(obj, "equipment_status"));
+                    if ("RUN".equals(status)) item.state = EquipmentAdapter.EquipmentState.RUN;
+                } else if ("CRITICAL".equals(level)) {
                     item.state = EquipmentAdapter.EquipmentState.OFF;
                 } else {
                     item.state = EquipmentAdapter.EquipmentState.IDLE;
@@ -219,6 +233,7 @@ public class EquipmentFragment extends Fragment {
                 if (!comment.isEmpty()) {
                     item.latestMessage = "Latest: " + comment;
                 }
+                handleThresholdProposal(item, obj);
                 item.timeText = toTimeText(optString(obj, "timestamp"));
             } else if ("lot".equals(type)) {
                 item.latestMessage = "Latest: LOT 완료";
@@ -251,6 +266,25 @@ public class EquipmentFragment extends Fragment {
         created.expectedUnits = 40;
         stateMap.put(equipmentId, created);
         return created;
+    }
+
+    private void handleThresholdProposal(EquipmentAdapter.EquipmentUiItem item, JsonObject oraclePayload) {
+        if (item == null) return;
+        ThresholdProposal proposal = ThresholdProposal.fromOraclePayload(item.equipmentId, oraclePayload);
+        if (proposal == null) return;
+
+        if (proposal.isPending()) {
+            item.thresholdProposal = proposal;
+            return;
+        }
+
+        item.thresholdProposal = null;
+        if ((proposal.isApproved() || proposal.isRejected())
+                && thresholdProposalStore != null
+                && thresholdProposalStore.markResultNotified(proposal.getProposalId(), proposal.getStatus())
+                && getContext() != null) {
+            Toast.makeText(getContext(), proposal.getResultMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void renderConnectionState() {

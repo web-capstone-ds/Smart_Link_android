@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -31,9 +32,11 @@ import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.DashboardLineState;
 import com.smartfactory.visioninspection.models.FeedEvent;
 import com.smartfactory.visioninspection.models.InspectionEvent;
+import com.smartfactory.visioninspection.models.ThresholdProposal;
 import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.EventHistoryStore;
 import com.smartfactory.visioninspection.utils.SessionManager;
+import com.smartfactory.visioninspection.utils.ThresholdProposalStore;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -72,6 +75,7 @@ public class DashboardFragment extends Fragment {
     private int lotFailCount = 0;
     private final Set<String> countedLotKeys = new HashSet<>();
     private EventHistoryStore historyStore;
+    private ThresholdProposalStore thresholdProposalStore;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Map<String, Runnable> blinkJobs = new HashMap<>();
@@ -130,6 +134,9 @@ public class DashboardFragment extends Fragment {
         if (getContext() == null) return;
         if (historyStore == null) {
             historyStore = new EventHistoryStore(getContext());
+        }
+        if (thresholdProposalStore == null) {
+            thresholdProposalStore = new ThresholdProposalStore(getContext());
         }
     }
 
@@ -246,6 +253,11 @@ public class DashboardFragment extends Fragment {
         getActivity().runOnUiThread(() -> {
             try {
                 String type = eventType == null ? "" : eventType.trim().toLowerCase();
+                if ("alarm".equals(type) && (payload == null || payload.trim().isEmpty())) {
+                    if (adapter != null) adapter.applyAlarmClearEvent(equipmentId);
+                    updateSummaryCounts();
+                    return;
+                }
                 if ("recommendation".equals(type)) {
                     ControlRecommendation recommendation = ControlRecommendation.fromPayload(equipmentId, payload);
                     if (recommendation != null) {
@@ -271,6 +283,7 @@ public class DashboardFragment extends Fragment {
                     String comment = optString(obj, "ai_comment");
                     String ts = optString(obj, "timestamp");
                     adapter.applyOracleEvent(equipmentId, judgment, comment, ts);
+                    handleThresholdProposal(equipmentId, obj);
                     updateSummaryCounts();
                 } else if ("lot".equals(type)) {
                     String lotId = optString(obj, "lot_id");
@@ -361,6 +374,24 @@ public class DashboardFragment extends Fragment {
         }
         blinkJobs.clear();
         blinkingEquipmentIds.clear();
+    }
+
+    private void handleThresholdProposal(String equipmentId, JsonObject oraclePayload) {
+        ThresholdProposal proposal = ThresholdProposal.fromOraclePayload(equipmentId, oraclePayload);
+        if (proposal == null || adapter == null) return;
+
+        if (proposal.isPending()) {
+            adapter.applyThresholdProposalEvent(equipmentId, proposal);
+            return;
+        }
+
+        adapter.applyThresholdProposalEvent(equipmentId, null);
+        if ((proposal.isApproved() || proposal.isRejected())
+                && thresholdProposalStore != null
+                && thresholdProposalStore.markResultNotified(proposal.getProposalId(), proposal.getStatus())
+                && getContext() != null) {
+            Toast.makeText(getContext(), proposal.getResultMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void updateMqttStateUi() {

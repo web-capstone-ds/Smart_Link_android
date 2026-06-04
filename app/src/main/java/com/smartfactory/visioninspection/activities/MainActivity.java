@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     private ImageButton btnCloseGlobalAlert;
     private String activeAlertEquipmentId;
     private FeedFragment.QuickFilter activeAlertQuickFilter;
+    private String activeRecipeNoticeBurstId;
     private static final long GLOBAL_ALERT_AUTO_HIDE_MS = 5000L;
     private final Handler globalAlertHandler = new Handler(Looper.getMainLooper());
     private final Runnable globalAlertAutoHideRunnable = this::hideGlobalAlert;
@@ -87,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         String title;
         String body;
         boolean hwAlert;
+        boolean recipeNotice;
+        String targetBurstId;
         FeedFragment.QuickFilter quickFilter;
     }
 
@@ -249,6 +252,9 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         if (cardGlobalAlert == null) return;
 
         cardGlobalAlert.setOnClickListener(v -> {
+            if (activeRecipeNoticeBurstId != null && activeAlertEquipmentId != null && mqttManager != null) {
+                mqttManager.sendAlarmAck(activeAlertEquipmentId, activeRecipeNoticeBurstId);
+            }
             if (activeAlertQuickFilter != null && activeAlertEquipmentId != null) {
                 openFeedWithLineQuickFilter(activeAlertEquipmentId, activeAlertQuickFilter);
             } else if (activeAlertQuickFilter != null) {
@@ -398,11 +404,11 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             }
         }
 
-        boolean enabled = alert.hwAlert
+        boolean enabled = alert.recipeNotice || (alert.hwAlert
                 ? alarmSettingsManager.isHwAlertEnabled()
                 : (alert.severity == AlertSeverity.FAIL
                     ? alarmSettingsManager.isFailAlertEnabled()
-                    : alarmSettingsManager.isMarginalAlertEnabled());
+                    : alarmSettingsManager.isMarginalAlertEnabled()));
         if (!enabled) return;
 
         showGlobalAlert(alert);
@@ -427,15 +433,20 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             if ("alarm".equals(type)) {
                 String alarmLevel = optString(obj, "alarm_level").toUpperCase(Locale.ROOT);
                 String code = safe(optString(obj, "hw_error_code"), "HW_ALARM");
+                String detail = optString(obj, "hw_error_detail");
 
                 GlobalAlertPayload out = new GlobalAlertPayload();
                 out.messageId = messageId;
                 out.equipmentId = eqId;
-                out.severity = "CRITICAL".equals(alarmLevel) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+                out.recipeNotice = "RECIPE_CHANGED_NOTICE".equalsIgnoreCase(code);
+                out.targetBurstId = optString(obj, "burst_id");
+                out.severity = out.recipeNotice ? AlertSeverity.MARGINAL : ("CRITICAL".equals(alarmLevel) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL);
                 out.hwAlert = true;
                 out.quickFilter = FeedFragment.QuickFilter.HW;
-                out.title = (out.severity == AlertSeverity.FAIL ? "CRITICAL 알람 발생" : "WARNING 알람 발생");
-                out.body = lineLabel + " · " + code;
+                out.title = out.recipeNotice ? "레시피 변경 알림" : (out.severity == AlertSeverity.FAIL ? "CRITICAL 알람 발생" : "WARNING 알람 발생");
+                out.body = out.recipeNotice
+                        ? lineLabel + " · " + safe(detail, "레시피가 변경되었습니다")
+                        : lineLabel + " · " + code;
                 return out;
             }
 
@@ -502,6 +513,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         if (cardGlobalAlert == null) return;
         activeAlertEquipmentId = payload.equipmentId;
         activeAlertQuickFilter = payload.quickFilter;
+        activeRecipeNoticeBurstId = payload.recipeNotice ? payload.targetBurstId : null;
         tvGlobalAlertTitle.setText(payload.title);
         tvGlobalAlertBody.setText(payload.body);
 
@@ -527,6 +539,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         cancelGlobalAlertAutoHide();
         activeAlertEquipmentId = null;
         activeAlertQuickFilter = null;
+        activeRecipeNoticeBurstId = null;
         if (cardGlobalAlert != null) {
             cardGlobalAlert.setVisibility(View.GONE);
         }

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.card.MaterialCardView;
 import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.models.ControlRecommendation;
+import com.smartfactory.visioninspection.models.ThresholdProposal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
         public String latestMessage = "Latest: 데이터 수신 대기";
         public String timeText = "--:--:--";
         public ControlRecommendation recommendation;
+        public ThresholdProposal thresholdProposal;
     }
 
     public interface OnEquipmentClickListener {
@@ -105,7 +107,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             tvEquipmentId.setText(item.equipmentId);
             tvLatest.setText(item.latestMessage);
             tvTime.setText(item.timeText);
-            bindRecommendation(item.recommendation);
+            bindProposal(item.thresholdProposal, item.recommendation);
 
             if (item.state == EquipmentState.RUN) {
                 setStatusStyle("RUN",
@@ -128,7 +130,17 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             }
         }
 
-        private void bindRecommendation(ControlRecommendation recommendation) {
+        private void bindProposal(ThresholdProposal proposal, ControlRecommendation recommendation) {
+            if (proposal != null && proposal.isPending()) {
+                recommendationLayout.setVisibility(View.VISIBLE);
+                recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_warning);
+                tvRecommendationTitle.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.color_marginal));
+                tvRecommendationTitle.setText(proposal.getBannerTitle());
+                tvRecommendationReason.setText(proposal.getBannerReason());
+                tvRecommendationActions.setText(proposal.getBannerDetail());
+                return;
+            }
+
             if (recommendation == null || !recommendation.isOpen()) {
                 recommendationLayout.setVisibility(View.GONE);
                 return;

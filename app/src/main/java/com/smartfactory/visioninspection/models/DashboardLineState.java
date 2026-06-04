@@ -13,6 +13,7 @@ public class DashboardLineState {
     private String eventMessage;
     private String lastErrorCode;
     private ControlRecommendation recommendation;
+    private ThresholdProposal thresholdProposal;
     private int currentUnits;
     private int expectedUnits;
     private LineResult result = LineResult.IDLE;
@@ -32,6 +33,7 @@ public class DashboardLineState {
     public String getEventMessage() { return eventMessage; }
     public String getLastErrorCode() { return lastErrorCode; }
     public ControlRecommendation getRecommendation() { return recommendation; }
+    public ThresholdProposal getThresholdProposal() { return thresholdProposal; }
     public int getCurrentUnits() { return currentUnits; }
     public int getExpectedUnits() { return expectedUnits; }
     public LineResult getResult() { return result; }
@@ -44,6 +46,7 @@ public class DashboardLineState {
     public void setEventMessage(String eventMessage) { this.eventMessage = eventMessage; }
     public void setLastErrorCode(String lastErrorCode) { this.lastErrorCode = lastErrorCode; }
     public void setRecommendation(ControlRecommendation recommendation) { this.recommendation = recommendation; }
+    public void setThresholdProposal(ThresholdProposal thresholdProposal) { this.thresholdProposal = thresholdProposal; }
     public void setCurrentUnits(int currentUnits) { this.currentUnits = currentUnits; }
     public void setExpectedUnits(int expectedUnits) { this.expectedUnits = expectedUnits; }
     public void setResult(LineResult result) { this.result = result; }

@@ -177,14 +177,15 @@ public class FeedAdapter extends RecyclerView.Adapter<FeedAdapter.ViewHolder> {
             int bgColor = Color.parseColor("#151B25");
             int strokeColor = Color.parseColor("#354154");
             int dotColor = Color.parseColor("#7D8590");
+            boolean recipeNotice = "RECIPE_CHANGED_NOTICE".equalsIgnoreCase(event.getAlarmCode());
 
             card.setStrokeColor(strokeColor);
             card.setCardBackgroundColor(bgColor);
             dot.setBackgroundColor(dotColor);
 
-            tvBadge.setText(event.getAlarmLevel() == FeedEvent.AlarmLevel.CRITICAL ? "HW \uC54C\uB78C \u00B7 CRITICAL" : "HW \uC54C\uB78C \u00B7 WARNING");
+            tvBadge.setText(recipeNotice ? "운영 알림 · 레시피 변경" : (event.getAlarmLevel() == FeedEvent.AlarmLevel.CRITICAL ? "HW \uC54C\uB78C \u00B7 CRITICAL" : "HW \uC54C\uB78C \u00B7 WARNING"));
             tvBadge.setTextColor(color);
-            tvTitle.setText(safe(event.getAlarmCode(), "HW_ALARM"));
+            tvTitle.setText(recipeNotice ? "레시피 변경" : safe(event.getAlarmCode(), "HW_ALARM"));
             tvBody.setText(safe(event.getAlarmDescription(), "\uC7A5\uBE44 \uC54C\uB78C \uBC1C\uC0DD"));
             tvMeta.setText("burst_id: " + safe(event.getBurstId(), "-"));
         }
