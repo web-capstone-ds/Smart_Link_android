@@ -49,6 +49,7 @@ public class FeedFragment extends Fragment {
     private static final String FILTER_MARGINAL = "MARGINAL";
     private static final String FILTER_FAIL = "FAIL";
     private static final String FILTER_HW = "HW";
+    private static final String TZ_KST = "Asia/Seoul";
 
     private TextView tvUserId;
     private TextView tvUserName;
@@ -181,7 +182,9 @@ public class FeedFragment extends Fragment {
         }
 
         if (historyStore != null) {
-            historyStore.appendFeedEvent(event);
+            if (!historyStore.appendFeedEvent(event)) {
+                return;
+            }
         }
 
         for (FeedEvent old : allEvents) {
@@ -231,7 +234,7 @@ public class FeedFragment extends Fragment {
 
         Set<String> lineIds = new LinkedHashSet<>();
         lineIds.add(FILTER_ALL);
-        allEvents.stream()
+        getTodayDisplayEvents().stream()
                 .map(FeedEvent::getEquipmentId)
                 .filter(id -> id != null && !id.trim().isEmpty())
                 .sorted(Comparator.comparingInt(this::parseLineNo))
@@ -305,7 +308,7 @@ public class FeedFragment extends Fragment {
     private void applyFilters() {
         filteredEvents.clear();
 
-        for (FeedEvent event : allEvents) {
+        for (FeedEvent event : getTodayDisplayEvents()) {
             // ORACLE 카드는 리스트에 직접 표시하지 않음 (LOT 상세에서 노출)
             if (event.getEventType() == FeedEvent.EventType.ORACLE_ANALYSIS) continue;
 
@@ -338,6 +341,25 @@ public class FeedFragment extends Fragment {
             if (matchesSingleResultFilter(event, filter)) return true;
         }
         return false;
+    }
+
+    private List<FeedEvent> getTodayDisplayEvents() {
+        List<FeedEvent> out = new ArrayList<>();
+        String today = formatKstDate(System.currentTimeMillis());
+
+        for (FeedEvent event : allEvents) {
+            if (event == null) continue;
+            if (!today.equals(formatKstDate(event.getOccurredAtMillis()))) continue;
+
+            out.add(event);
+        }
+        return out;
+    }
+
+    private String formatKstDate(long millis) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
+        sdf.setTimeZone(TimeZone.getTimeZone(TZ_KST));
+        return sdf.format(new Date(millis > 0 ? millis : System.currentTimeMillis()));
     }
 
     private boolean matchesSingleResultFilter(FeedEvent event, String filter) {

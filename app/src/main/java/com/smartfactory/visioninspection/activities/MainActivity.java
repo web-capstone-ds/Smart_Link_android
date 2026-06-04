@@ -357,14 +357,14 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
     public void onMqttEventReceived(String equipmentId, String eventType, String payload) {
         runOnUiThread(() -> {
             handleGlobalAlertFromMqtt(equipmentId, eventType, payload);
+            if (feedFragment != null) {
+                feedFragment.onMqttEvent(equipmentId, eventType, payload);
+            }
             if (dashboardFragment != null) {
                 dashboardFragment.onMqttEvent(equipmentId, eventType, payload);
             }
             if (equipmentFragment != null) {
                 equipmentFragment.onMqttEvent(equipmentId, eventType, payload);
-            }
-            if (feedFragment != null) {
-                feedFragment.onMqttEvent(equipmentId, eventType, payload);
             }
             if (reportFragment != null) {
                 reportFragment.onMqttEvent();

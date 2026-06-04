@@ -3,7 +3,6 @@ package com.smartfactory.visioninspection.adapters;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -16,8 +15,6 @@ import com.smartfactory.visioninspection.models.ControlRecommendation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-
 public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.ViewHolder> {
 
     public enum EquipmentState {
@@ -86,9 +83,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
         private final TextView tvRecommendationTitle;
         private final TextView tvRecommendationReason;
         private final TextView tvRecommendationActions;
-        private final TextView tvProgress;
         private final TextView tvTime;
-        private final ProgressBar pbProgress;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -102,9 +97,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             tvRecommendationTitle = itemView.findViewById(R.id.tv_eq_recommendation_title);
             tvRecommendationReason = itemView.findViewById(R.id.tv_eq_recommendation_reason);
             tvRecommendationActions = itemView.findViewById(R.id.tv_eq_recommendation_actions);
-            tvProgress = itemView.findViewById(R.id.tv_eq_progress);
             tvTime = itemView.findViewById(R.id.tv_eq_last_check);
-            pbProgress = itemView.findViewById(R.id.progress_eq);
         }
 
         void bind(EquipmentUiItem item) {
@@ -113,12 +106,6 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             tvLatest.setText(item.latestMessage);
             tvTime.setText(item.timeText);
             bindRecommendation(item.recommendation);
-
-            int expected = Math.max(item.expectedUnits, 1);
-            int current = Math.max(item.currentUnits, 0);
-            int progress = Math.min(100, (int) ((current * 100f) / expected));
-            pbProgress.setProgress(progress);
-            tvProgress.setText(String.format(Locale.getDefault(), "진행도 %d%%  %,d / %,d", progress, current, expected));
 
             if (item.state == EquipmentState.RUN) {
                 setStatusStyle("RUN",

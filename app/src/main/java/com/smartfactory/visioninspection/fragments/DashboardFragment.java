@@ -23,27 +23,34 @@ import com.google.gson.JsonParser;
 import com.smartfactory.visioninspection.R;
 import com.smartfactory.visioninspection.StatusUpdateEvent;
 import com.smartfactory.visioninspection.activities.MainActivity;
+import com.smartfactory.visioninspection.adapters.FeedAdapter;
 import com.smartfactory.visioninspection.adapters.InspectionCardAdapter;
 import com.smartfactory.visioninspection.adapters.InspectionCardAdapter.LotOutcome;
 import com.smartfactory.visioninspection.bottomsheets.LotDetailBottomSheet;
 import com.smartfactory.visioninspection.models.ControlRecommendation;
 import com.smartfactory.visioninspection.models.DashboardLineState;
+import com.smartfactory.visioninspection.models.FeedEvent;
 import com.smartfactory.visioninspection.models.InspectionEvent;
 import com.smartfactory.visioninspection.models.User;
 import com.smartfactory.visioninspection.utils.EventHistoryStore;
 import com.smartfactory.visioninspection.utils.SessionManager;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 public class DashboardFragment extends Fragment {
 
     private static final long BLINK_INTERVAL_MS = 220L;
     private static final long FAIL_BLINK_DURATION_MS = 2000L;
     private static final long MARGINAL_BLINK_DURATION_MS = 1000L;
+    private static final String TZ_KST = "Asia/Seoul";
 
     private RecyclerView recyclerView;
     private InspectionCardAdapter adapter;
@@ -78,6 +85,7 @@ public class DashboardFragment extends Fragment {
         bindViews(view);
         initHistoryStore();
         checkAndHandleCounterDateRollover(null);
+
         restorePersistedCounters();
         setupHeaderUser();
         setupRecycler();
@@ -386,6 +394,17 @@ public class DashboardFragment extends Fragment {
         // 앱이 켜진 상태에서 자정 넘어가도 자동 리셋
         checkAndHandleCounterDateRollover(null);
 
+        HistorySummary summary = calculateTodayFeedSummary();
+        lotFailCount = summary.fail;
+        lotMarginalCount = summary.marginal;
+        lotPassCount = summary.pass;
+
+        tvCountFail.setText(lotFailCount + "\n\uBD88\uD569\uACA9");
+        tvCountMarginal.setText(lotMarginalCount + "\n\uACBD\uACC4");
+        tvCountPass.setText(lotPassCount + "\n\uD569\uACA9");
+        tvCountIdle.setText(summary.hw + "\n\uC815\uC9C0/\uB300\uAE30");
+        if (shouldUseFeedSummaryCounts()) return;
+
         if (adapter == null) return;
         List<DashboardLineState> items = adapter.getCurrentItems();
         int idle = 0;
@@ -401,6 +420,52 @@ public class DashboardFragment extends Fragment {
         tvCountMarginal.setText(lotMarginalCount + "\n경계");
         tvCountPass.setText(lotPassCount + "\n합격");
         tvCountIdle.setText(idle + "\n정지/대기");
+    }
+
+    private HistorySummary calculateTodayFeedSummary() {
+        HistorySummary summary = new HistorySummary();
+        if (historyStore == null) return summary;
+
+        String today = formatKstDate(System.currentTimeMillis());
+        List<FeedEvent> events = historyStore.loadFeedEvents();
+        for (FeedEvent event : events) {
+            if (event == null) continue;
+            if (!today.equals(formatKstDate(event.getOccurredAtMillis()))) continue;
+
+            if (event.getEventType() == FeedEvent.EventType.HW_ALARM) {
+                summary.hw++;
+                continue;
+            }
+
+            if (event.getEventType() != FeedEvent.EventType.LOT_END) continue;
+
+            FeedAdapter.LotResult result = FeedAdapter.computeLotResult(event);
+            if (result == FeedAdapter.LotResult.FAIL) {
+                summary.fail++;
+            } else if (result == FeedAdapter.LotResult.MARGINAL) {
+                summary.marginal++;
+            } else if (result == FeedAdapter.LotResult.PASS) {
+                summary.pass++;
+            }
+        }
+        return summary;
+    }
+
+    private boolean shouldUseFeedSummaryCounts() {
+        return true;
+    }
+
+    private String formatKstDate(long millis) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
+        sdf.setTimeZone(TimeZone.getTimeZone(TZ_KST));
+        return sdf.format(new Date(millis > 0 ? millis : System.currentTimeMillis()));
+    }
+
+    private static class HistorySummary {
+        int fail;
+        int marginal;
+        int pass;
+        int hw;
     }
 
     private void accumulateLotOutcome(String equipmentId, String lotId, LotOutcome outcome, @Nullable String lotTimestampIso) {

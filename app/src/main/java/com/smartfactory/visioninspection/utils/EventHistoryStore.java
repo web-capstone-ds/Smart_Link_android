@@ -165,16 +165,22 @@ public class EventHistoryStore {
         return out;
     }
 
-    public synchronized void appendFeedEvent(FeedEvent event) {
-        if (event == null) return;
+    public synchronized boolean appendFeedEvent(FeedEvent event) {
+        if (event == null) return false;
         List<FeedEvent> list = loadFeedEvents();
 
         String eventId = event.getId();
         if (eventId != null && !eventId.trim().isEmpty()) {
             for (FeedEvent old : list) {
                 if (eventId.equals(old.getId())) {
-                    return;
+                    return false;
                 }
+            }
+        }
+
+        for (FeedEvent old : list) {
+            if (isSameDailyDisplayEvent(old, event)) {
+                return false;
             }
         }
 
@@ -183,6 +189,61 @@ public class EventHistoryStore {
             list = new ArrayList<>(list.subList(0, MAX_FEED_HISTORY));
         }
         saveFeedEvents(list);
+        return true;
+    }
+
+    private boolean isSameDailyDisplayEvent(FeedEvent old, FeedEvent incoming) {
+        if (old == null || incoming == null) return false;
+        if (old.getEventType() != incoming.getEventType()) return false;
+        if (!formatKstDate(new Date(old.getOccurredAtMillis()))
+                .equals(formatKstDate(new Date(incoming.getOccurredAtMillis())))) {
+            return false;
+        }
+        if (!sameText(old.getEquipmentId(), incoming.getEquipmentId())) return false;
+
+        if (incoming.getEventType() == FeedEvent.EventType.LOT_END) {
+            return sameText(old.getLotId(), incoming.getLotId())
+                    && classifyLot(old) == classifyLot(incoming);
+        }
+
+        if (incoming.getEventType() == FeedEvent.EventType.HW_ALARM) {
+            if (!sameText(old.getAlarmCode(), incoming.getAlarmCode())) return false;
+            String oldBurst = normalize(old.getBurstId());
+            String newBurst = normalize(incoming.getBurstId());
+            if (!oldBurst.isEmpty() && !"-".equals(oldBurst)
+                    && !newBurst.isEmpty() && !"-".equals(newBurst)) {
+                return oldBurst.equals(newBurst);
+            }
+            return sameText(old.getAlarmDescription(), incoming.getAlarmDescription());
+        }
+
+        if (incoming.getEventType() == FeedEvent.EventType.ORACLE_ANALYSIS) {
+            return sameText(old.getLotId(), incoming.getLotId())
+                    && old.getAnalysisLevel() == incoming.getAnalysisLevel()
+                    && sameText(old.getAnalysisMessage(), incoming.getAnalysisMessage());
+        }
+
+        return false;
+    }
+
+    private int classifyLot(FeedEvent event) {
+        int total = Math.max(1, event.getTotalUnits());
+        int fail = Math.max(0, event.getFailUnits());
+        float yield = event.getYieldRate();
+        if (yield <= 0f && total > 0) {
+            yield = ((total - fail) * 100f) / total;
+        }
+        if (fail <= 0) return 0;
+        if (yield >= 95f) return 1;
+        return 2;
+    }
+
+    private boolean sameText(String a, String b) {
+        return normalize(a).equals(normalize(b));
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
     }
 
     public synchronized void saveFeedEvents(List<FeedEvent> events) {
