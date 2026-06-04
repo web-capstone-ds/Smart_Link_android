@@ -135,7 +135,7 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.View
             }
 
             recommendationLayout.setVisibility(View.VISIBLE);
-            if (recommendation.isCritical()) {
+            if (recommendation.isDisplayCritical()) {
                 recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_critical);
                 tvRecommendationTitle.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.color_fail));
             } else {

@@ -75,6 +75,10 @@ public class ControlRecommendation {
         return "CRITICAL".equalsIgnoreCase(severity);
     }
 
+    public boolean isDisplayCritical() {
+        return "CRITICAL".equalsIgnoreCase(getDisplaySeverityLabel());
+    }
+
     public String getRecommendationId() {
         return recommendationId;
     }
@@ -108,6 +112,9 @@ public class ControlRecommendation {
     }
 
     public String getSuggestedActionLabel() {
+        String preset = getPresetActionLabel();
+        if (!preset.isEmpty()) return preset;
+
         if (suggestedActions.isEmpty()) return "권고 조치: 확인 필요";
 
         List<String> labels = new ArrayList<>();
@@ -121,13 +128,65 @@ public class ControlRecommendation {
     }
 
     public String getBannerTitle() {
+        String severityLabel = getDisplaySeverityLabel();
+        String title = getPresetTitle();
+        if (!title.isEmpty()) return "[" + severityLabel + "] " + title;
+
         String ruleLabel = rule == null || rule.trim().isEmpty()
                 ? "제어 추천"
-                : "제어 추천 " + rule.trim().toUpperCase(Locale.ROOT);
-        String severityLabel = severity == null || severity.trim().isEmpty()
+                : rule.trim().toUpperCase(Locale.ROOT);
+        return "[" + severityLabel + "] " + ruleLabel;
+    }
+
+    private String getDisplaySeverityLabel() {
+        String text = getSearchText();
+        if (text.contains("VISION_SCORE_ERR") || text.contains("RECIPE") || text.contains("TEACHING")) {
+            return "WARNING";
+        }
+        if (text.contains("EAP_DISCONNECTED")
+                || text.contains("EQUIPMENT_STOP")
+                || text.contains("STOP")) {
+            return "CRITICAL";
+        }
+        return severity == null || severity.trim().isEmpty()
                 ? "INFO"
                 : severity.trim().toUpperCase(Locale.ROOT);
-        return "[권고] " + ruleLabel + " · " + severityLabel;
+    }
+
+    private String getPresetTitle() {
+        String text = getSearchText();
+        if (text.contains("VISION_SCORE_ERR") || text.contains("RECIPE") || text.contains("TEACHING")) {
+            return "LOT 레시피 변경";
+        }
+        if (text.contains("EAP_DISCONNECTED")
+                || text.contains("EQUIPMENT_STOP")
+                || text.contains("STOP")) {
+            return "장비 정지";
+        }
+        return "";
+    }
+
+    private String getPresetActionLabel() {
+        String text = getSearchText();
+        if (text.contains("VISION_SCORE_ERR") || text.contains("RECIPE") || text.contains("TEACHING")) {
+            return "권고 조치: 레시피 재로드 / LOT 중단";
+        }
+        if (text.contains("EAP_DISCONNECTED")
+                || text.contains("EQUIPMENT_STOP")
+                || text.contains("STOP")) {
+            return "권고 조치: 장비 현장 조회 필요";
+        }
+        return "";
+    }
+
+    private String getSearchText() {
+        StringBuilder sb = new StringBuilder();
+        if (rule != null) sb.append(rule).append(' ');
+        if (reason != null) sb.append(reason).append(' ');
+        for (String action : suggestedActions) {
+            if (action != null) sb.append(action).append(' ');
+        }
+        return sb.toString().toUpperCase(Locale.ROOT);
     }
 
     private static List<String> parseActions(JsonElement element) {

@@ -400,7 +400,7 @@ public class InspectionCardAdapter extends RecyclerView.Adapter<InspectionCardAd
             }
 
             int titleColor;
-            if (recommendation.isCritical()) {
+            if (recommendation.isDisplayCritical()) {
                 recommendationLayout.setBackgroundResource(R.drawable.bg_recommendation_critical);
                 titleColor = Color.parseColor("#FF6C6C");
             } else {
