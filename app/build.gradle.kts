@@ -6,7 +6,7 @@ plugins {
 val cloudAuthBaseUrl = (project.findProperty("AUTH_BASE_URL") as String?) ?: "http://13.209.10.148:8080/api/v1/"
 
 // MQTT is separate from the web backend. Mobile defaults to the current laptop broker IP.
-val mobileMqttBrokerUrl = (project.findProperty("MQTT_BROKER_URL") as String?) ?: "tcp://10.0.2.2:1883"//ip주소 입력해야함
+val mobileMqttBrokerUrl = (project.findProperty("MQTT_BROKER_URL") as String?) ?: "tcp://192.168.219.105:1883"//ip주소 입력해야함
 val emulatorAuthBaseUrl = (project.findProperty("EMULATOR_AUTH_BASE_URL") as String?) ?: cloudAuthBaseUrl
 val emulatorMqttBrokerUrl = (project.findProperty("EMULATOR_MQTT_BROKER_URL") as String?) ?: "tcp://10.0.2.2:1883"
 

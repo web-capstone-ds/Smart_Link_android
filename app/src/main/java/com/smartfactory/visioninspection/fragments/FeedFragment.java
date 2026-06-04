@@ -739,7 +739,7 @@ public class FeedFragment extends Fragment {
                 .build();
 
         FeedEvent oracleEvent = resolveLinkedOracleEvent(lotEvent);
-        LotDetailBottomSheet sheet = LotDetailBottomSheet.newInstance(inspectionEvent, user, oracleEvent);
+        LotDetailBottomSheet sheet = LotDetailBottomSheet.newInstance(inspectionEvent, user, oracleEvent, lotEvent);
         sheet.show(getParentFragmentManager(), LotDetailBottomSheet.TAG);
     }
 

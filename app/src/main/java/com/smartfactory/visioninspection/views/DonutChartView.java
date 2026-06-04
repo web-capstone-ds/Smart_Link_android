@@ -33,6 +33,7 @@ public class DonutChartView extends View {
     private int   failUnits     = 0;
     private int   totalUnits    = 1; // 0 나눔 방지
     private boolean dataSet     = false;
+    private Integer resultColorOverride = null;
 
     // ── 생성자 ───────────────────────────────────────────────
     public DonutChartView(Context context) {
@@ -66,6 +67,11 @@ public class DonutChartView extends View {
         this.failUnits     = failUnits;
         this.totalUnits    = (totalUnits > 0) ? totalUnits : 1;
         this.dataSet       = true;
+        invalidate();
+    }
+
+    public void setResultColorOverride(int color) {
+        this.resultColorOverride = color;
         invalidate();
     }
 
@@ -115,7 +121,8 @@ public class DonutChartView extends View {
 
         // ── 중앙 수율 텍스트 ──────────────────────────────────
         float yieldRate = (passUnits / (float) totalUnits) * 100f;
-        int yieldColor  = yieldRate >= 95f ? COLOR_PASS
+        int yieldColor  = resultColorOverride != null ? resultColorOverride
+                : yieldRate >= 95f ? COLOR_PASS
                 : yieldRate >= 85f ? COLOR_MARGINAL
                 : COLOR_FAIL;
 

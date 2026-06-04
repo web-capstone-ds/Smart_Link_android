@@ -39,6 +39,8 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity implements MqttEventListener {
 
@@ -68,6 +70,8 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
 
     private final Set<String> handledAlertMessageIds = new HashSet<>();
     private final Map<String, String> latestStatusByEquipment = new HashMap<>();
+    private final Map<String, AlertSeverity> latestLotSeverityByEquipment = new HashMap<>();
+    private final Map<String, AlertSeverity> latestLotSeverityByLotKey = new HashMap<>();
 
     private DashboardFragment dashboardFragment;
     private EquipmentFragment equipmentFragment;
@@ -469,11 +473,13 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
             if ("oracle".equals(type)) {
                 String judgment = optString(obj, "judgment").toUpperCase(Locale.ROOT);
                 if ("NORMAL".equals(judgment)) return null;
+                String lotId = optString(obj, "lot_id");
+                String comment = optString(obj, "ai_comment");
 
                 GlobalAlertPayload out = new GlobalAlertPayload();
                 out.messageId = messageId;
                 out.equipmentId = eqId;
-                out.severity = "DANGER".equals(judgment) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+                out.severity = resolveOracleAlertSeverity(judgment, eqId, lotId, comment);
                 out.title = (out.severity == AlertSeverity.FAIL ? "오라클 위험 알람" : "오라클 경계 알람");
                 out.body = lineLabel + " · " + safe(optString(obj, "ai_comment"), "AI 분석 경고");
                 return out;
@@ -493,6 +499,7 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
                 } else {
                     severity = AlertSeverity.FAIL;
                 }
+                rememberLotAlertSeverity(eqId, optString(obj, "lot_id"), severity);
 
                 GlobalAlertPayload out = new GlobalAlertPayload();
                 out.messageId = messageId;
@@ -507,6 +514,43 @@ public class MainActivity extends AppCompatActivity implements MqttEventListener
         }
 
         return null;
+    }
+
+    private void rememberLotAlertSeverity(String equipmentId, String lotId, AlertSeverity severity) {
+        if (equipmentId == null || equipmentId.trim().isEmpty() || severity == null) return;
+        latestLotSeverityByEquipment.put(equipmentId, severity);
+        if (lotId != null && !lotId.trim().isEmpty()) {
+            latestLotSeverityByLotKey.put(equipmentId + "|" + lotId, severity);
+        }
+    }
+
+    private AlertSeverity resolveOracleAlertSeverity(String judgment, String equipmentId, String lotId, String comment) {
+        if (equipmentId != null && !equipmentId.trim().isEmpty()) {
+            if (lotId != null && !lotId.trim().isEmpty()) {
+                AlertSeverity byLot = latestLotSeverityByLotKey.get(equipmentId + "|" + lotId);
+                if (byLot != null) return byLot;
+            }
+            AlertSeverity byEquipment = latestLotSeverityByEquipment.get(equipmentId);
+            if (byEquipment != null) return byEquipment;
+        }
+
+        Float yield = extractYieldPercent(comment);
+        if (yield != null) {
+            return yield >= 95f ? AlertSeverity.MARGINAL : AlertSeverity.FAIL;
+        }
+
+        return "DANGER".equals(judgment) ? AlertSeverity.FAIL : AlertSeverity.MARGINAL;
+    }
+
+    private Float extractYieldPercent(String text) {
+        if (text == null || text.trim().isEmpty()) return null;
+        Matcher matcher = Pattern.compile("(?:수율|Pass)\\D*(\\d+(?:\\.\\d+)?)\\s*%").matcher(text);
+        if (!matcher.find()) return null;
+        try {
+            return Float.parseFloat(matcher.group(1));
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     private void showGlobalAlert(GlobalAlertPayload payload) {

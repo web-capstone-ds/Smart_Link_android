@@ -55,6 +55,10 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
     private static final String K_OPERATOR    = "operator";
     private static final String K_USER_NAME   = "userName";
     private static final String K_USER_EMP_ID = "userEmpId";
+    private static final String K_TOTAL_UNITS = "totalUnits";
+    private static final String K_PASS_UNITS = "passUnits";
+    private static final String K_FAIL_UNITS = "failUnits";
+    private static final String K_YIELD_RATE = "yieldRate";
     private static final String K_ORACLE_LEVEL = "oracleLevel";
     private static final String K_ORACLE_MESSAGE = "oracleMessage";
     private static final String K_ORACLE_CODES = "oracleCodes";
@@ -94,6 +98,21 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
 
 
     // ???? ???춳: ??쎄쾿 獄쏅????쀫뱜 ????????????????????????????????????????????????????????????????????
+    public static LotDetailBottomSheet newInstance(InspectionEvent event, User user,
+                                                   @Nullable FeedEvent oracleEvent,
+                                                   @Nullable FeedEvent lotEvent) {
+        LotDetailBottomSheet sheet = newInstance(event, user, oracleEvent);
+        Bundle args = sheet.getArguments();
+        if (args != null && lotEvent != null && lotEvent.getEventType() == FeedEvent.EventType.LOT_END) {
+            args.putInt(K_TOTAL_UNITS, lotEvent.getTotalUnits());
+            args.putInt(K_PASS_UNITS, lotEvent.getPassUnits());
+            args.putInt(K_FAIL_UNITS, lotEvent.getFailUnits());
+            args.putFloat(K_YIELD_RATE, lotEvent.getYieldRate());
+        }
+        sheet.setArguments(args);
+        return sheet;
+    }
+
     @Override
     public int getTheme() {
         return R.style.Theme_SmartFactory_BottomSheet;
@@ -131,7 +150,7 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
                 .build();
 
         // LOT 筌욌쵌????밴쉐
-        LotSummary lot = MockDataUtil.generateLotSummary(event);
+        LotSummary lot = applyActualLotMetrics(MockDataUtil.generateLotSummary(event), args);
 
         // ???? ??삳쐭 獄쏅뗄?????????????????????????????????????????????????????????????????????????????????
         bindHeader(view, lot, result,
@@ -169,6 +188,39 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
     }
 
     // ???? ??삳쐭 獄쏅뗄???????????????????????????????????????????????????????????????????????????????????????
+    private LotSummary applyActualLotMetrics(LotSummary mockLot, Bundle args) {
+        int totalUnits = args.getInt(K_TOTAL_UNITS, 0);
+        if (totalUnits <= 0) return mockLot;
+
+        int passUnits = Math.max(0, args.getInt(K_PASS_UNITS, 0));
+        int failUnits = Math.max(0, args.getInt(K_FAIL_UNITS, 0));
+        int marginalUnits = Math.max(0, totalUnits - passUnits - failUnits);
+        float yieldRate = args.getFloat(K_YIELD_RATE, 0f);
+        if (yieldRate <= 0f) {
+            yieldRate = (passUnits * 100f) / Math.max(1, totalUnits);
+        }
+        float failRate = (failUnits * 100f) / Math.max(1, totalUnits);
+
+        return new LotSummary(
+                mockLot.getLotId(),
+                mockLot.getEquipmentId(),
+                mockLot.getRecipeId(),
+                mockLot.getOperator(),
+                mockLot.getStartTime(),
+                mockLot.getEndTime(),
+                totalUnits,
+                passUnits,
+                failUnits,
+                marginalUnits,
+                yieldRate,
+                failRate,
+                mockLot.getTopDefects(),
+                mockLot.getOracleStatus(),
+                mockLot.getAlarms(),
+                mockLot.getResult()
+        );
+    }
+
     private void bindHeader(View view, LotSummary lot,
                             InspectionEvent.Result result,
                             String userName, String userEmpId) {
@@ -232,14 +284,14 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
         DonutChartView donut = view.findViewById(R.id.donut_chart);
         donut.setData(lot.getPassUnits(), lot.getMarginalUnits(),
                 lot.getFailUnits(), lot.getTotalUnits());
+        int resultColor = getResultColor(lot.getResult());
+        donut.setResultColorOverride(resultColor);
 
         // ??륁몛 % ??용뮞??(筌△뫂???袁⑥삋)
         TextView tvYieldPct = view.findViewById(R.id.tv_yield_pct);
         float    yield      = lot.getYieldRate();
         tvYieldPct.setText(String.format(Locale.getDefault(), "%.1f%%", yield));
-        int yColor = yield >= 95f ? Color.parseColor("#3FB950")
-                : yield >= 85f ? Color.parseColor("#D29922")
-                : Color.parseColor("#F85149");
+        int yColor = resultColor;
         tvYieldPct.setTextColor(yColor);
 
         // 4揶???????
@@ -262,6 +314,16 @@ public class LotDetailBottomSheet extends BottomSheetDialogFragment {
     }
 
     // ???? 嚥≪뮉?????뿺 ????????????????????????????????????????????????????????????????????????????????????
+    private int getResultColor(InspectionEvent.Result result) {
+        if (result == InspectionEvent.Result.FAIL) {
+            return Color.parseColor("#F85149");
+        }
+        if (result == InspectionEvent.Result.MARGINAL) {
+            return Color.parseColor("#D29922");
+        }
+        return Color.parseColor("#3FB950");
+    }
+
     private void bindAlarmTab(View view, LotSummary lot, Bundle args) {
         // ??而?袁⑦?燁삳똻???
         List<LotAlarm> alarms = new ArrayList<>(lot.getAlarms());
