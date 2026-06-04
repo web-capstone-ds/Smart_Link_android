@@ -271,7 +271,10 @@ public class EquipmentFragment extends Fragment {
     private void handleThresholdProposal(EquipmentAdapter.EquipmentUiItem item, JsonObject oraclePayload) {
         if (item == null) return;
         ThresholdProposal proposal = ThresholdProposal.fromOraclePayload(item.equipmentId, oraclePayload);
-        if (proposal == null) return;
+        if (proposal == null) {
+            item.thresholdProposal = null;
+            return;
+        }
 
         if (proposal.isPending()) {
             item.thresholdProposal = proposal;

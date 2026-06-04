@@ -377,8 +377,12 @@ public class DashboardFragment extends Fragment {
     }
 
     private void handleThresholdProposal(String equipmentId, JsonObject oraclePayload) {
+        if (adapter == null) return;
         ThresholdProposal proposal = ThresholdProposal.fromOraclePayload(equipmentId, oraclePayload);
-        if (proposal == null || adapter == null) return;
+        if (proposal == null) {
+            adapter.applyThresholdProposalEvent(equipmentId, null);
+            return;
+        }
 
         if (proposal.isPending()) {
             adapter.applyThresholdProposalEvent(equipmentId, proposal);
